@@ -172,12 +172,19 @@ app.post("/api/transcribe-audio", async (req, res) => {
         data: audioBase64
       }
     };
-    const promptText = `Transcribe con total precisi\xF3n el audio adjunto de la conversaci\xF3n.
-Idioma de origen esperado: ${sourceLanguage}.
-Idioma de salida para los subt\xEDtulos: ${targetLanguage}.
-${promptContext ? `Contexto adicional de la reuni\xF3n/tema: ${promptContext}` : ""}
+    const promptText = `Eres un sistema avanzado de inteligencia ac\xFAstica y diarizaci\xF3n de voz (Acoustic Speaker Diarization) para subtitulado profesional EBU.
 
-Devuelve un JSON con la transcripci\xF3n exacta, puntuaci\xF3n limpia, divisi\xF3n en subt\xEDtulos legibles y etiquetas de hablantes si se aprecian voces distintas.`;
+Escucha atentamente la onda de audio adjunta y analiza las diferencias ac\xFAsticas de las voces (tono de voz, timbre masculino/femenino, tono grave/agudo, pausas de locuci\xF3n).
+
+REGLAS DE DI\xC1LOGO POR TIPO DE VOZ:
+1. Si detectas DI\xC1LOGO o interlocutores con voces diferentes:
+   - DEBES colocar cada intervenci\xF3n de voz distinta en una L\xCDNEA SEPARADA con salto de l\xEDnea '\\n', empezando con gui\xF3n "- ".
+   - Ejemplo:
+     "- Hola, \xBFqu\xE9 tal?
+     - Muy bien, \xBFy t\xFA?"
+2. Si toda la locuci\xF3n del audio es de UNA MISMA VOZ, NO uses guiones "- ".
+3. Idioma origen: ${sourceLanguage}, Idioma salida: ${targetLanguage}.
+${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: {
@@ -190,14 +197,14 @@ Devuelve un JSON con la transcripci\xF3n exacta, puntuaci\xF3n limpia, divisi\xF
           properties: {
             transcript: {
               type: import_genai.Type.STRING,
-              description: "Transcripci\xF3n limpia y corregida."
+              description: "Transcripci\xF3n completa formateada con saltos de l\xEDnea '\\n' y guiones '- ' si hay voces diferentes."
             },
             subtitles: {
               type: import_genai.Type.ARRAY,
               items: {
                 type: import_genai.Type.OBJECT,
                 properties: {
-                  speaker: { type: import_genai.Type.STRING },
+                  speaker: { type: import_genai.Type.STRING, description: "Identificador de voz (ej: 'Voz 1 (Grave)', 'Voz 2 (Aguda)')" },
                   text: { type: import_genai.Type.STRING }
                 },
                 required: ["text"]
