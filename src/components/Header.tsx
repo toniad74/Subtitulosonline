@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Mic, MicOff, Settings, Sparkles, FileText, Download, Volume2, Radio, Tv, ExternalLink, Check, Copy } from "lucide-react";
 import { AudioDeviceOption, SubtitleSettings } from "../types";
 import { getSavedRoomId } from "../utils/peerSync";
@@ -131,54 +132,62 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Modal de Ayuda para vMix / OBS */}
-          {showObsHelp && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setShowObsHelp(false)}>
-              <div className="bg-[#12121A] border border-[#2B2B38] rounded-2xl max-w-md w-full p-5 text-left shadow-2xl text-gray-200 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between border-b border-[#2B2B38] pb-3">
-                  <div className="flex items-center gap-2">
-                    <Tv className="w-5 h-5 text-purple-400 shrink-0" />
-                    <h3 className="font-bold text-white text-sm">Conexión con vMix y OBS</h3>
-                  </div>
-                  <button
-                    onClick={() => setShowObsHelp(false)}
-                    className="text-gray-400 hover:text-white text-xl font-bold px-2 py-0.5 shrink-0"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="space-y-3 text-xs leading-relaxed text-gray-300">
-                  <div className="p-3 bg-purple-950/40 border border-purple-500/30 rounded-xl space-y-2">
-                    <p className="font-bold text-purple-300 text-xs">URL para vMix / OBS</p>
-                    <p className="text-[11px]">Añade un <strong>Web Browser Input</strong> con este enlace:</p>
-                    <div className="flex flex-col gap-2 bg-[#0A0A0F] p-2 rounded-lg border border-[#2B2B38]">
-                      <span className="font-mono text-[10px] text-purple-200 break-all leading-tight">{getOverlayUrl()}</span>
-                      <button
-                        onClick={() => handleCopyObsUrl(getOverlayUrl())}
-                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold text-xs w-full transition"
-                      >
-                        {copiedObs ? "¡URL Copiada!" : "Copiar URL"}
-                      </button>
+          {/* Modal de Ayuda para vMix / OBS (Renderizado vía Portal en document.body) */}
+          {showObsHelp &&
+            createPortal(
+              <div
+                className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+                onClick={() => setShowObsHelp(false)}
+              >
+                <div
+                  className="bg-[#12121A] border border-[#2B2B38] rounded-2xl max-w-md w-full p-5 text-left shadow-2xl text-gray-200 space-y-3 max-h-[85vh] overflow-y-auto my-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between border-b border-[#2B2B38] pb-3">
+                    <div className="flex items-center gap-2">
+                      <Tv className="w-5 h-5 text-purple-400 shrink-0" />
+                      <h3 className="font-bold text-white text-sm">Conexión con vMix y OBS</h3>
                     </div>
-                    <ul className="list-disc pl-4 space-y-1 text-gray-300 pt-1 text-[11px]">
-                      <li>Señal en <strong>tiempo real por WebRTC</strong> entre tu navegador y vMix.</li>
-                      <li>En vMix, aplica filtro <strong>Chroma Key</strong> (Verde <code className="text-emerald-300">#00FF00</code>).</li>
-                    </ul>
+                    <button
+                      onClick={() => setShowObsHelp(false)}
+                      className="text-gray-400 hover:text-white text-xl font-bold px-2 py-0.5 shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 text-xs leading-relaxed text-gray-300">
+                    <div className="p-3 bg-purple-950/40 border border-purple-500/30 rounded-xl space-y-2">
+                      <p className="font-bold text-purple-300 text-xs">URL para vMix / OBS</p>
+                      <p className="text-[11px]">Añade un <strong>Web Browser Input</strong> con este enlace:</p>
+                      <div className="flex flex-col gap-2 bg-[#0A0A0F] p-2 rounded-lg border border-[#2B2B38]">
+                        <span className="font-mono text-[10px] text-purple-200 break-all leading-tight">{getOverlayUrl()}</span>
+                        <button
+                          onClick={() => handleCopyObsUrl(getOverlayUrl())}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold text-xs w-full transition"
+                        >
+                          {copiedObs ? "¡URL Copiada!" : "Copiar URL"}
+                        </button>
+                      </div>
+                      <ul className="list-disc pl-4 space-y-1 text-gray-300 pt-1 text-[11px]">
+                        <li>Señal en <strong>tiempo real por WebRTC</strong> entre tu navegador y vMix.</li>
+                        <li>En vMix, aplica filtro <strong>Chroma Key</strong> (Verde <code className="text-emerald-300">#00FF00</code>).</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      onClick={() => setShowObsHelp(false)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition"
+                    >
+                      Entendido
+                    </button>
                   </div>
                 </div>
-
-                <div className="pt-1 flex justify-end">
-                  <button
-                    onClick={() => setShowObsHelp(false)}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+              </div>,
+              document.body
+            )}
 
           {/* Summary button */}
           <button
