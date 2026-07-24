@@ -130,6 +130,15 @@ export default function App() {
     };
   }, []);
 
+const ensurePeriod = (str: string): string => {
+  const trimmed = str.trim();
+  if (!trimmed) return "";
+  if (/[.?!…:]$/.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed}.`;
+};
+
   // Helper to reset silence and commit timers
   const resetSilenceTimers = () => {
     if (silenceTimeoutRef.current) {
@@ -142,7 +151,8 @@ export default function App() {
     // Auto-commit interim text after 1s of pause if WebSpeech API hasn't fired isFinal
     commitTimeoutRef.current = window.setTimeout(() => {
       if (latestInterimRef.current.trim()) {
-        const textToCommit = latestInterimRef.current.trim();
+        const rawToCommit = latestInterimRef.current.trim();
+        const textToCommit = ensurePeriod(rawToCommit);
         latestInterimRef.current = "";
         setInterimText("");
 
@@ -156,7 +166,7 @@ export default function App() {
         const newItem: SubtitleItem = {
           id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: timeString,
-          rawText: textToCommit,
+          rawText: rawToCommit,
           text: textToCommit,
           confidence: 0.9,
           isFinal: true,
@@ -378,6 +388,8 @@ export default function App() {
                 window.clearTimeout(commitTimeoutRef.current);
               }
 
+              const formattedText = ensurePeriod(text);
+
               const now = new Date();
               const timeString = now.toLocaleTimeString([], {
                 hour: "2-digit",
@@ -389,7 +401,7 @@ export default function App() {
                 id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                 timestamp: timeString,
                 rawText: text,
-                text: text,
+                text: formattedText,
                 confidence,
                 isFinal: true,
                 createdAt: Date.now(),
