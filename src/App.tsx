@@ -262,7 +262,11 @@ const ensurePeriod = (str: string): string => {
 
   // Handle AI Refinement of raw subtitle
   const refineSubtitleWithAI = async (rawItem: SubtitleItem) => {
-    if (!settings.aiAutoRefine || !rawItem.rawText.trim()) return;
+    const srcLang = (settings.sourceLanguage || "es").split("-")[0].toLowerCase();
+    const tgtLang = (settings.targetLanguage || "es").split("-")[0].toLowerCase();
+    const isTranslationMode = srcLang !== tgtLang;
+
+    if ((!settings.aiAutoRefine && !isTranslationMode) || !rawItem.rawText.trim()) return;
 
     // Minimal rate limit (200ms) only to prevent duplicate burst events
     const now = Date.now();
