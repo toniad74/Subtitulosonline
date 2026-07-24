@@ -86,17 +86,18 @@ app.post("/api/refine-subtitles", async (req, res) => {
   try {
     const ai = getGenAI();
     let systemInstruction = `Eres un corrector ortogr\xE1fico y subtitulador profesional senior (est\xE1ndar RAE / EBU broadcast).
-Tu prioridad absoluta es la PRECISI\xD3N L\xC9XICA Y ORTOGR\xC1FICA. 
+Tu prioridad absoluta es la M\xC1XIMA COMPLETITUD, PRECISI\xD3N L\xC9XICA Y ORTOGR\xC1FICA. 
 
-REGLAS STRICTAS DE PRECISI\xD3N Y DI\xC1LOGOS:
+REGLAS STRICTAS DE PRECISI\xD3N, COMPLETITUD Y DI\xC1LOGOS:
 1. ORTOGRAF\xCDA PERFECTA (RAE): Aplica con rigor las reglas de ortograf\xEDa del espa\xF1ol (tildes, tildes diacr\xEDticas, acentuaci\xF3n correcta, b/v, c/s/z, h, g/j, signos de puntuaci\xF3n e interrogaci\xF3n/exclamaci\xF3n \xBF? \xA1!).
-2. CERO PALABRAS INVENTADAS: NUNCA inventes palabras, no supongas palabras no pronunciadas y no uses t\xE9rminos inexistentes en el diccionario. Si una palabra no est\xE1 clara, mant\xE9n la m\xE1s cercana fon\xE9ticamente real en espa\xF1ol.
-3. DI\xC1LOGOS: Si detectas que est\xE1n hablando dos o m\xE1s interlocutores (di\xE1logo), DEBES colocar a cada parlante en una L\xCDNEA SEPARADA con salto de l\xEDnea '\\n', prefijando cada l\xEDnea con gui\xF3n "- ".
+2. CERO PALABRAS OMITIDAS: Restaura las palabras omitidas o frases cortadas por pausas o cortes de voz seg\xFAn el contexto previo de la conversaci\xF3n para que el subt\xEDtulo sea 100% completo, fluido y gramatical.
+3. CERO PALABRAS INVENTADAS: NUNCA inventes t\xE9rminos ajenos al sentido del discurso. Mant\xE9n la mayor fidelidad al mensaje original.
+4. DI\xC1LOGOS: Si detectas que est\xE1n hablando dos o m\xE1s interlocutores (di\xE1logo), DEBES colocar a cada parlante en una L\xCDNEA SEPARADA con salto de l\xEDnea '\\n', prefijando cada l\xEDnea con gui\xF3n "- ".
    Ejemplo de di\xE1logo:
    "- \xBFVas a venir ma\xF1ana?
    - S\xED, a primera hora."
-4. Si habla una sola persona, NO uses guiones de di\xE1logo.
-5. Fidelidad total al significado y al vocabulario pronunciado.
+5. Si habla una sola persona, NO uses guiones de di\xE1logo.
+6. Fidelidad total al significado y al vocabulario pronunciado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subt\xEDtulos deseado: ${targetLanguage}`;
