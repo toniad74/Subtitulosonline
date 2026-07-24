@@ -86,32 +86,65 @@ export async function getAudioStream(
  * Returns a MediaStream with ONLY audio tracks (video tracks are stopped immediately).
  */
 export async function getSystemAudioStream(): Promise<MediaStream> {
+  // 1. Attempt getDisplayMedia (Native Browser Screen / Tab Audio Share)
   try {
-    // Standard getDisplayMedia invocation for max cross-browser compatibility
     const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true, // Required by Web standard, discarded immediately
-      audio: true, // Captures system / tab / app audio output
+      video: true,
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      } as any,
     });
 
-    // Stop video tracks immediately — we only want audio from computer apps
     displayStream.getVideoTracks().forEach((track) => track.stop());
 
     const audioTracks = displayStream.getAudioTracks();
-    if (audioTracks.length === 0) {
-      displayStream.getTracks().forEach((t) => t.stop());
-      throw new Error(
-        "No se capturó audio del sistema. Al seleccionar la pantalla en la ventana del navegador, debes activar la casilla 'Compartir audio del sistema' (abajo a la izquierda)."
-      );
+    if (audioTracks.length > 0) {
+      return new MediaStream(audioTracks);
     }
 
-    return new MediaStream(audioTracks);
+    // Stop empty tracks if no audio track was provided by Chrome
+    displayStream.getTracks().forEach((t) => t.stop());
+    console.warn("getDisplayMedia returned 0 audio tracks for selected window/screen. Falling back to system virtual input.");
   } catch (err: any) {
-    console.error("getDisplayMedia error:", err);
     if (err.name === "NotAllowedError") {
-      throw new Error("Selección cancelada o denegada por el usuario.");
+      throw new Error("Selección de pantalla cancelada por el usuario.");
     }
-    throw new Error(`Error al capturar audio del sistema: ${err.message || err}`);
+    console.warn("getDisplayMedia warning:", err);
   }
+
+  // 2. FALLBACK A: Search for Windows Stereo Mix / NDI Audio / Virtual Cable / Loopback devices
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const systemDevice = devices.find(
+      (d) =>
+        d.kind === "audioinput" &&
+        /mezcla|stereo|mix|cable|virtual|ndi|loopback|desktop|system/i.test(d.label)
+    );
+
+    if (systemDevice) {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: { exact: systemDevice.deviceId },
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    }
+  } catch (fallbackErr) {
+    console.warn("Virtual input device fallback failed:", fallbackErr);
+  }
+
+  // 3. FALLBACK B: Default audio input with audio processing turned off
+  return await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+    },
+  });
 }
 
 /**

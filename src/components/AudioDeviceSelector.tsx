@@ -207,9 +207,12 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 3</span>
-                  <span><strong>¡IMPORTANTE!</strong> Asegúrate de dejar activada la casilla <strong>"Compartir audio del sistema"</strong> (abajo a la izquierda).</span>
+                  <span>En la ventana emergente, elige la pestaña <strong>"Toda la pantalla"</strong> o <strong>"Pestaña de Chrome"</strong> (donde aparece la casilla de audio abajo a la izquierda).</span>
                 </div>
               </div>
+              <p className="text-[10px] text-[#6B6B76] italic">
+                * Nota: Si tu versión de Windows o navegador no incluye la casilla de audio en la ventana elegida, la aplicación usará automáticamente tu entrada de audio del sistema (Mezcla Estéreo, NDI o Cable Virtual).
+              </p>
 
               <button
                 onClick={() => handleDeviceItemClick(SYSTEM_AUDIO_DEVICE_ID)}
