@@ -346,8 +346,10 @@ export const OverlayView: React.FC<{
   };
 
   // Auto-fitting Pill Background Style
+  const bgOpacity = settings.bgOpacity ?? 90;
+  const isNoPill = bgOpacity === 0;
   const pillStyle: React.CSSProperties = {
-    backgroundColor: hexToRgba(settings.bgColor || "#0a0a0c", settings.bgOpacity ?? 90),
+    backgroundColor: isNoPill ? "transparent" : hexToRgba(settings.bgColor || "#0a0a0c", bgOpacity),
   };
 
   // Vertical position class
@@ -498,7 +500,9 @@ export const OverlayView: React.FC<{
               ...pillStyle,
               ...getTextStyle(),
             }}
-            className={`inline-block px-8 py-4 sm:px-10 sm:py-5 ${borderRadiusClasses[settings.borderRadius || "lg"]} shadow-2xl backdrop-blur-md transition-all duration-150 max-w-[92vw] text-center ${
+            className={`inline-block px-8 py-4 sm:px-10 sm:py-5 ${
+              isNoPill ? "" : `${borderRadiusClasses[settings.borderRadius || "lg"]} shadow-2xl backdrop-blur-md`
+            } transition-all duration-150 max-w-[92vw] text-center ${
               fontSizeClasses[settings.fontSize || "lg"]
             }`}
           >

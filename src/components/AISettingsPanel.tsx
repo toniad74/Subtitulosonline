@@ -354,7 +354,9 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
               <div className="space-y-1 pt-1">
                 <div className="flex justify-between items-center text-[10px]">
                   <span className="text-[#6B6B76] font-bold uppercase">Opacidad / Transparencia del Fondo</span>
-                  <span className="font-mono text-indigo-400 font-bold">{settings.bgOpacity ?? 90}%</span>
+                  <span className="font-mono text-indigo-400 font-bold">
+                    {(settings.bgOpacity ?? 90) === 0 ? "0% (Sin Fondo / Texto Flotante)" : `${settings.bgOpacity ?? 90}%`}
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -365,6 +367,29 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
                   onChange={(e) => onUpdateSettings({ bgOpacity: Number(e.target.value) })}
                   className="w-full accent-indigo-500 bg-[#0E0E12] cursor-pointer"
                 />
+                {/* Opacity Presets */}
+                <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                  {[
+                    { label: "🚫 Sin Fondo (0%)", val: 0 },
+                    { label: "50% Transparente", val: 50 },
+                    { label: "75% Traslúcido", val: 75 },
+                    { label: "90% Estándar", val: 90 },
+                    { label: "100% Opaco", val: 100 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.val}
+                      type="button"
+                      onClick={() => onUpdateSettings({ bgOpacity: preset.val })}
+                      className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition ${
+                        (settings.bgOpacity ?? 90) === preset.val
+                          ? "border-indigo-500 bg-indigo-500/20 text-white shadow"
+                          : "border-[#2A2A32] text-[#6B6B76] hover:text-white"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
