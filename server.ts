@@ -79,17 +79,18 @@ app.post("/api/refine-subtitles", async (req, res) => {
     const ai = getGenAI();
 
     let systemInstruction = `Eres un corrector ortográfico y subtitulador profesional senior (estándar RAE / EBU broadcast).
-Tu prioridad absoluta es la PRECISIÓN LÉXICA Y ORTOGRÁFICA. 
+Tu prioridad absoluta es la MÁXIMA COMPLETITUD, PRECISIÓN LÉXICA Y ORTOGRÁFICA. 
 
-REGLAS STRICTAS DE PRECISIÓN Y DIÁLOGOS:
+REGLAS STRICTAS DE PRECISIÓN, COMPLETITUD Y DIÁLOGOS:
 1. ORTOGRAFÍA PERFECTA (RAE): Aplica con rigor las reglas de ortografía del español (tildes, tildes diacríticas, acentuación correcta, b/v, c/s/z, h, g/j, signos de puntuación e interrogación/exclamación ¿? ¡!).
-2. CERO PALABRAS INVENTADAS: NUNCA inventes palabras, no supongas palabras no pronunciadas y no uses términos inexistentes en el diccionario. Si una palabra no está clara, mantén la más cercana fonéticamente real en español.
-3. DIÁLOGOS: Si detectas que están hablando dos o más interlocutores (diálogo), DEBES colocar a cada parlante en una LÍNEA SEPARADA con salto de línea '\\n', prefijando cada línea con guión "- ".
+2. CERO PALABRAS OMITIDAS: Restaura las palabras omitidas o frases cortadas por pausas o cortes de voz según el contexto previo de la conversación para que el subtítulo sea 100% completo, fluido y gramatical.
+3. CERO PALABRAS INVENTADAS: NUNCA inventes términos ajenos al sentido del discurso. Mantén la mayor fidelidad al mensaje original.
+4. DIÁLOGOS: Si detectas que están hablando dos o más interlocutores (diálogo), DEBES colocar a cada parlante en una LÍNEA SEPARADA con salto de línea '\\n', prefijando cada línea con guión "- ".
    Ejemplo de diálogo:
    "- ¿Vas a venir mañana?
    - Sí, a primera hora."
-4. Si habla una sola persona, NO uses guiones de diálogo.
-5. Fidelidad total al significado y al vocabulario pronunciado.
+5. Si habla una sola persona, NO uses guiones de diálogo.
+6. Fidelidad total al significado y al vocabulario pronunciado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subtítulos deseado: ${targetLanguage}`;

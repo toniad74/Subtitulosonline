@@ -254,9 +254,9 @@ const ensurePeriod = (str: string): string => {
   const refineSubtitleWithAI = async (rawItem: SubtitleItem) => {
     if (!settings.aiAutoRefine || !rawItem.rawText.trim()) return;
 
-    // Rate-limit AI calls (at most once every 1 second) to process subtitles quickly
+    // Minimal rate limit (200ms) only to prevent duplicate burst events
     const now = Date.now();
-    if (now - lastRefineTimeRef.current < 1000) {
+    if (now - lastRefineTimeRef.current < 200) {
       return;
     }
     lastRefineTimeRef.current = now;
