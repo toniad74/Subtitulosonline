@@ -85,8 +85,19 @@ app.post("/api/refine-subtitles", async (req, res) => {
   };
   try {
     const ai = getGenAI();
-    let systemInstruction = `Eres un sistema experto en subtitulado e inteligencia conversacional en tiempo real.
-Tu objetivo es tomar transcripciones parciales o crudas de una conversaci\xF3n y generar subt\xEDtulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+    let systemInstruction = `Eres un ingeniero senior de subtitulaci\xF3n profesional (est\xE1ndar EBU / Netflix broadcast).
+Tu objetivo es tomar transcripciones parciales o crudas y generar subt\xEDtulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+
+REGLAS OBLIGATORIAS DE SUBTITULACI\xD3N:
+1. Cuando detectes un DI\xC1LOGO (dos o m\xE1s interlocutores), DEBES separar cada parlante en una l\xEDnea diferente, prefijada con gui\xF3n "- ".
+   Ejemplo correcto:
+   "- \xBFQu\xE9 hora es?
+   - Son las tres de la tarde."
+2. Si solo hay UN hablante, NO uses guiones de di\xE1logo.
+3. Puntuaci\xF3n perfecta: puntos, comas, signos de interrogaci\xF3n y exclamaci\xF3n donde correspondan.
+4. M\xE1ximo 42 caracteres por l\xEDnea (est\xE1ndar broadcast).
+5. Mant\xE9n la naturalidad del habla sin a\xF1adir ni inventar contenido.
+
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subt\xEDtulos deseado: ${targetLanguage}`;
     if (glossary) {
@@ -95,7 +106,7 @@ Tu objetivo es tomar transcripciones parciales o crudas de una conversaci\xF3n y
     }
     if (promptMode === "speakers") {
       systemInstruction += `
-- Identifica y etiqueta a los hablantes si detectas cambio de interlocutor o contexto (ej: "Hablante 1:", "Hablante 2:").`;
+- PRIORIDAD: Identifica y etiqueta a los hablantes con nombre si es posible (ej: "- Juan: \xBFC\xF3mo est\xE1s?\\n- Mar\xEDa: Bien, gracias."). Si no puedes identificarlos, usa "- Hablante 1:", "- Hablante 2:".`;
     }
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
