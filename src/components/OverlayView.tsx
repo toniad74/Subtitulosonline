@@ -4,6 +4,7 @@ import { Copy, Check, ExternalLink, RefreshCw, Eye, Sparkles, Monitor, ArrowLeft
 import { SpeechRecognitionService } from "../utils/speech";
 
 import { ClientPeerManager, getSavedRoomId, OverlayStatePayload } from "../utils/peerSync";
+import { MqttSubscriber, getSavedTopic } from "../utils/mqttSync";
 
 const hexToRgba = (hex: string, opacity: number = 90) => {
   if (!hex) return `rgba(10, 10, 12, ${opacity / 100})`;
@@ -193,12 +194,21 @@ export const OverlayView: React.FC<{
     };
   }, []);
 
-  // Listen to BroadcastChannel, localStorage, Server Polling, and WebRTC PeerJS for multi-tab & vMix/OBS live sync
+  // Listen to MQTT WebSockets, BroadcastChannel, localStorage, and WebRTC PeerJS for multi-tab & vMix/OBS live sync
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const targetRoom = params.get("room") || getSavedRoomId();
+    const targetTopic = params.get("topic") || getSavedTopic();
 
-    // 1. WebRTC PeerJS Sync (essential for vMix & separate browser processes)
+    // 0. MQTT WebSockets Sync (Ultra fast & 100% reliable for vMix across any network/browser)
+    const mqttSub = new MqttSubscriber(targetTopic, (payload) => {
+      if (payload.interimText !== undefined) setInterimText(payload.interimText);
+      if (payload.currentSubtitle !== undefined) setCurrentSubtitle(payload.currentSubtitle);
+      if (payload.settings) setSettings(payload.settings);
+      if (payload.isListening !== undefined) setIsListening(payload.isListening);
+    });
+
+    // 1. WebRTC PeerJS Sync
     const clientPeer = new ClientPeerManager(
       targetRoom,
       (payload) => {
@@ -271,6 +281,7 @@ export const OverlayView: React.FC<{
     const pollInterval = window.setInterval(pollServerState, 200);
 
     return () => {
+      mqttSub.destroy();
       clientPeer.destroy();
       if (bc) bc.close();
       window.removeEventListener("storage", handleStorage);

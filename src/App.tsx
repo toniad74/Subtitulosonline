@@ -25,6 +25,7 @@ import {
   SubtitleSettings,
 } from "./types";
 import { HostPeerManager, getSavedRoomId } from "./utils/peerSync";
+import { MqttPublisher, getSavedTopic } from "./utils/mqttSync";
 import { Radio, Mic, Sparkles, Volume2, ShieldCheck, Download, Trash2, Info } from "lucide-react";
 
 const DEFAULT_SETTINGS: SubtitleSettings = {
@@ -103,6 +104,19 @@ export default function App() {
       }
     };
   }, [roomId]);
+
+  const mqttPubRef = useRef<MqttPublisher | null>(null);
+  const [mqttTopic] = useState<string>(() => getSavedTopic());
+
+  // MQTT WebSockets Publisher Initialization for vMix / OBS remote sync
+  useEffect(() => {
+    mqttPubRef.current = new MqttPublisher(mqttTopic);
+    return () => {
+      if (mqttPubRef.current) {
+        mqttPubRef.current.destroy();
+      }
+    };
+  }, [mqttTopic]);
 
   // Persistent BroadcastChannel for real-time OBS / tab syncing
   useEffect(() => {
@@ -194,6 +208,7 @@ export default function App() {
 
     sendLiveStateToServer(payload);
     hostPeerRef.current?.broadcast(payload);
+    mqttPubRef.current?.publish(payload);
   }, [interimText, currentSubtitle, settings, isListening, sendLiveStateToServer]);
 
   // Load available audio input devices on startup
