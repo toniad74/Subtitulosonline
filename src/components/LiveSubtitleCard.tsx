@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Sparkles, User, Maximize2, Minimize2, Copy, Check, Palette, Type, SquareDot } from "lucide-react";
 import { SubtitleItem, SubtitleSettings, SubtitleDisplayStyle } from "../types";
 import { formatProfessionalSubtitles } from "../utils/subtitleFormatter";
+import { getFontCss, DEFAULT_FONTS } from "../utils/fonts";
 
 interface LiveSubtitleCardProps {
   currentSubtitle: SubtitleItem | null;
@@ -65,38 +66,46 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
     "3xl": "text-4xl sm:text-5xl font-extrabold tracking-tight",
   };
 
-  const fontFamilyMap: Record<SubtitleSettings["fontFamily"], { name: string; fontCss: string }> = {
-    inter: { name: "Inter (Limpia)", fontCss: "'Inter', sans-serif" },
-    oswald: { name: "Oswald (Cine)", fontCss: "'Oswald', sans-serif" },
-    montserrat: { name: "Montserrat (Moderna)", fontCss: "'Montserrat', sans-serif" },
-    playfair: { name: "Playfair (Elegante)", fontCss: "'Playfair Display', serif" },
-    firacode: { name: "Fira Code (Mono)", fontCss: "'Fira Code', monospace" },
-    quicksand: { name: "Quicksand (Suave)", fontCss: "'Quicksand', sans-serif" },
-    caveat: { name: "Caveat (Manuscrita)", fontCss: "'Caveat', cursive" },
-  };
+  const fontFamilyMap: Record<string, { name: string; fontCss: string }> = {};
+  DEFAULT_FONTS.forEach((f) => {
+    fontFamilyMap[f.id] = { name: f.name, fontCss: f.fontCss };
+  });
 
-  // Subtitle text styling (Color + Border/Stroke + Shadow + Font)
+  // Subtitle text styling (Color + Shadow outline + Font)
+  // NOTE: We use only text-shadow for outlines, NOT WebkitTextStroke
+  // WebkitTextStroke causes horizontal lines through letters on many fonts
   const getTextStyle = (): React.CSSProperties => {
     const textColor = settings.textColor || "#ffffff";
     const borderColor = settings.textBorderColor || "#000000";
     const hasBorder = settings.textBorder ?? true;
     const borderSize = settings.textBorderSize || "medium";
-    const fontCss = fontFamilyMap[settings.fontFamily || "montserrat"]?.fontCss || "'Montserrat', sans-serif";
+    const fontCss = getFontCss(settings.fontFamily || "montserrat");
 
     let textShadow = "none";
-    let webkitTextStroke = "none";
 
     if (hasBorder) {
       if (borderSize === "thin") {
-        textShadow = `-1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor}, -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor}, 0 2px 4px rgba(0,0,0,0.8)`;
-        webkitTextStroke = `0.5px ${borderColor}`;
+        textShadow = `
+          -1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor},
+          -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor},
+          0 0 4px rgba(0,0,0,0.6)`;
       } else if (borderSize === "thick") {
-        textShadow = `-3px -3px 0 ${borderColor}, 3px -3px 0 ${borderColor}, -3px 3px 0 ${borderColor}, 3px 3px 0 ${borderColor}, 0 -3px 0 ${borderColor}, 0 3px 0 ${borderColor}, -3px 0 0 ${borderColor}, 3px 0 0 ${borderColor}, 0 4px 10px rgba(0,0,0,0.95)`;
-        webkitTextStroke = `1.5px ${borderColor}`;
+        textShadow = `
+          -2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor},
+          -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor},
+          0 -2px 0 ${borderColor}, 0 2px 0 ${borderColor},
+          -2px 0 0 ${borderColor}, 2px 0 0 ${borderColor},
+          -3px -3px 0 ${borderColor}, 3px -3px 0 ${borderColor},
+          -3px 3px 0 ${borderColor}, 3px 3px 0 ${borderColor},
+          0 4px 8px rgba(0,0,0,0.9)`;
       } else {
         // medium
-        textShadow = `-2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor}, -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor}, 0 2px 5px rgba(0,0,0,0.85)`;
-        webkitTextStroke = `1px ${borderColor}`;
+        textShadow = `
+          -1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor},
+          -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor},
+          -2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor},
+          -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor},
+          0 3px 6px rgba(0,0,0,0.8)`;
       }
     }
 
@@ -104,7 +113,6 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
       color: textColor,
       fontFamily: fontCss,
       textShadow,
-      WebkitTextStroke: webkitTextStroke,
     };
   };
 
@@ -154,16 +162,14 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
             <Type className="w-3.5 h-3.5 text-indigo-400" />
             <select
               value={settings.fontFamily || "montserrat"}
-              onChange={(e) => onUpdateSettings({ fontFamily: e.target.value as any })}
-              className="bg-transparent text-white text-[11px] font-medium border-0 focus:outline-none cursor-pointer pr-1"
+              onChange={(e) => onUpdateSettings({ fontFamily: e.target.value })}
+              className="bg-transparent text-white text-[11px] font-medium border-0 focus:outline-none cursor-pointer pr-1 max-w-[140px]"
             >
-              <option value="montserrat" className="bg-[#16161D] text-white">Montserrat</option>
-              <option value="oswald" className="bg-[#16161D] text-white">Oswald (Cine)</option>
-              <option value="inter" className="bg-[#16161D] text-white">Inter</option>
-              <option value="playfair" className="bg-[#16161D] text-white">Playfair (Serif)</option>
-              <option value="firacode" className="bg-[#16161D] text-white">Fira Code (Mono)</option>
-              <option value="quicksand" className="bg-[#16161D] text-white">Quicksand</option>
-              <option value="caveat" className="bg-[#16161D] text-white">Caveat (Manuscrita)</option>
+              {DEFAULT_FONTS.map((font) => (
+                <option key={font.id} value={font.id} className="bg-[#16161D] text-white">
+                  {font.name}
+                </option>
+              ))}
             </select>
           </div>
 

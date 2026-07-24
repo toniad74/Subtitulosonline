@@ -1,6 +1,7 @@
 import React from "react";
-import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type } from "lucide-react";
+import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type, Laptop } from "lucide-react";
 import { SubtitleSettings } from "../types";
+import { DEFAULT_FONTS, getInstalledSystemFonts, FontOption } from "../utils/fonts";
 
 interface AISettingsPanelProps {
   isOpen: boolean;
@@ -220,36 +221,35 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
 
             {/* Typography / Font Family Selection */}
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest text-[#6B6B76] font-bold flex items-center gap-1.5">
-                <Type className="w-3.5 h-3.5 text-indigo-400" />
-                Fuente / Tipografía del Subtítulo
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { id: "montserrat", name: "Montserrat", desc: "Moderna", fontCss: "'Montserrat', sans-serif" },
-                  { id: "oswald", name: "Oswald", desc: "Cine Bold", fontCss: "'Oswald', sans-serif" },
-                  { id: "inter", name: "Inter", desc: "Limpia", fontCss: "'Inter', sans-serif" },
-                  { id: "playfair", name: "Playfair", desc: "Elegante", fontCss: "'Playfair Display', serif" },
-                  { id: "firacode", name: "Fira Code", desc: "Monospace", fontCss: "'Fira Code', monospace" },
-                  { id: "quicksand", name: "Quicksand", desc: "Redondeada", fontCss: "'Quicksand', sans-serif" },
-                  { id: "caveat", name: "Caveat", desc: "Manuscrita", fontCss: "'Caveat', cursive" },
-                ].map((font) => (
-                  <button
-                    key={font.id}
-                    type="button"
-                    onClick={() => onUpdateSettings({ fontFamily: font.id as any })}
-                    className={`p-2 rounded-lg border text-left transition flex flex-col justify-between ${
-                      (settings.fontFamily || "montserrat") === font.id
-                        ? "border-indigo-500 bg-indigo-500/20 text-white shadow"
-                        : "border-[#2A2A32] bg-[#0E0E12] text-slate-300 hover:border-slate-600 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-sm font-semibold truncate" style={{ fontFamily: font.fontCss }}>
-                      Subtítulo Aa
-                    </span>
-                    <span className="text-[10px] text-[#6B6B76] mt-1 font-sans">{font.name}</span>
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] uppercase tracking-widest text-[#6B6B76] font-bold flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5 text-indigo-400" />
+                  Fuente / Tipografía del Subtítulo
+                </label>
+              </div>
+
+              {/* Font Selector Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
+                {DEFAULT_FONTS.map((font) => {
+                  const isSelected = (settings.fontFamily || "montserrat") === font.id;
+                  return (
+                    <button
+                      key={font.id}
+                      type="button"
+                      onClick={() => onUpdateSettings({ fontFamily: font.id })}
+                      className={`p-2 rounded-lg border text-left transition flex flex-col justify-between ${
+                        isSelected
+                          ? "border-indigo-500 bg-indigo-500/20 text-white shadow"
+                          : "border-[#2A2A32] bg-[#0E0E12] text-slate-300 hover:border-slate-600 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-sm font-semibold truncate" style={{ fontFamily: font.fontCss }}>
+                        Subtítulo Aa
+                      </span>
+                      <span className="text-[10px] text-[#6B6B76] mt-1 font-sans truncate">{font.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

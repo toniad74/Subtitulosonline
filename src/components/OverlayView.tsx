@@ -6,6 +6,7 @@ import { SpeechRecognitionService } from "../utils/speech";
 import { ClientPeerManager, getSavedRoomId, OverlayStatePayload } from "../utils/peerSync";
 import { MqttSubscriber, getSavedTopic } from "../utils/mqttSync";
 import { formatProfessionalSubtitles } from "../utils/subtitleFormatter";
+import { getFontCss } from "../utils/fonts";
 
 const hexToRgba = (hex: string, opacity: number = 90) => {
   if (!hex) return `rgba(10, 10, 12, ${opacity / 100})`;
@@ -301,26 +302,40 @@ export const OverlayView: React.FC<{
   );
 
   // Text Styling (Color, Border, Shadow, Font)
+  // NOTE: We use multi-directional text-shadow for outlines, NOT WebkitTextStroke
+  // WebkitTextStroke renders inside glyphs causing horizontal lines through letters
   const getTextStyle = (): React.CSSProperties => {
     const textColor = settings.textColor || "#ffffff";
     const borderColor = settings.textBorderColor || "#000000";
     const hasBorder = settings.textBorder ?? true;
     const borderSize = settings.textBorderSize || "medium";
-    const fontCss = fontFamilyMap[settings.fontFamily || "montserrat"] || "'Montserrat', sans-serif";
+    const fontCss = getFontCss(settings.fontFamily || "montserrat");
 
     let textShadow = "none";
-    let webkitTextStroke = "none";
 
     if (hasBorder) {
       if (borderSize === "thin") {
-        textShadow = `-1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor}, -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor}, 0 2px 4px rgba(0,0,0,0.8)`;
-        webkitTextStroke = `0.5px ${borderColor}`;
+        textShadow = `
+          -1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor},
+          -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor},
+          0 0 4px rgba(0,0,0,0.6)`;
       } else if (borderSize === "thick") {
-        textShadow = `-3px -3px 0 ${borderColor}, 3px -3px 0 ${borderColor}, -3px 3px 0 ${borderColor}, 3px 3px 0 ${borderColor}, 0 -3px 0 ${borderColor}, 0 3px 0 ${borderColor}, -3px 0 0 ${borderColor}, 3px 0 0 ${borderColor}, 0 4px 10px rgba(0,0,0,0.95)`;
-        webkitTextStroke = `1.5px ${borderColor}`;
+        textShadow = `
+          -2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor},
+          -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor},
+          0 -2px 0 ${borderColor}, 0 2px 0 ${borderColor},
+          -2px 0 0 ${borderColor}, 2px 0 0 ${borderColor},
+          -3px -3px 0 ${borderColor}, 3px -3px 0 ${borderColor},
+          -3px 3px 0 ${borderColor}, 3px 3px 0 ${borderColor},
+          0 4px 8px rgba(0,0,0,0.9)`;
       } else {
-        textShadow = `-2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor}, -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor}, 0 2px 5px rgba(0,0,0,0.85)`;
-        webkitTextStroke = `1px ${borderColor}`;
+        // medium
+        textShadow = `
+          -1px -1px 0 ${borderColor}, 1px -1px 0 ${borderColor},
+          -1px 1px 0 ${borderColor}, 1px 1px 0 ${borderColor},
+          -2px -2px 0 ${borderColor}, 2px -2px 0 ${borderColor},
+          -2px 2px 0 ${borderColor}, 2px 2px 0 ${borderColor},
+          0 3px 6px rgba(0,0,0,0.8)`;
       }
     }
 
@@ -328,7 +343,6 @@ export const OverlayView: React.FC<{
       color: textColor,
       fontFamily: fontCss,
       textShadow,
-      WebkitTextStroke: webkitTextStroke,
     };
   };
 

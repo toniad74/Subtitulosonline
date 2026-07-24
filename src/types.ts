@@ -25,7 +25,7 @@ export interface SubtitleSettings {
   sourceLanguage: string; // 'es-ES', 'en-US', etc.
   targetLanguage: string; // 'es', 'en', 'fr', 'de', 'it', 'pt', etc.
   fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
-  fontFamily: 'inter' | 'oswald' | 'montserrat' | 'playfair' | 'firacode' | 'quicksand' | 'caveat';
+  fontFamily: string;
   displayStyle: SubtitleDisplayStyle;
   overlayPosition: 'bottom' | 'center' | 'top';
   showSpeakers: boolean;
