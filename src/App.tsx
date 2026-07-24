@@ -135,9 +135,18 @@ export default function App() {
 const ensurePeriod = (str: string): string => {
   const trimmed = str.trim();
   if (!trimmed) return "";
-  if (/[.?!…:]$/.test(trimmed)) {
+
+  // If already ends with punctuation (. ? ! … : , -), preserve as is
+  if (/[.?!…:,\-]$/.test(trimmed)) {
     return trimmed;
   }
+
+  // If phrase ends with a conjunction/preposition (indicating mid-sentence pause), do NOT add a period
+  const trailingIncomplete = /\b(?:y|o|u|e|que|si|cuando|pero|porque|para|de|con|en|del|al|como|donde|mientras|aunque|ni|sino)\s*$/i.test(trimmed);
+  if (trailingIncomplete) {
+    return trimmed;
+  }
+
   return `${trimmed}.`;
 };
 
