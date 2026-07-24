@@ -139,47 +139,39 @@ const ensurePeriod = (str: string): string => {
   return `${trimmed}.`;
 };
 
-  // Helper to reset silence and commit timers
+  // Helper to deduplicate overlap words between consecutive subtitles
+  const deduplicateSubtitleText = (newText: string, lastText?: string): string => {
+    if (!lastText || !newText) return newText.trim();
+    const newWords = newText.trim().split(/\s+/);
+    const lastWords = lastText.trim().replace(/[.?!…:]$/g, "").split(/\s+/);
+
+    // Find if new text starts with trailing words of the previous subtitle
+    let overlapCount = 0;
+    const maxCheck = Math.min(newWords.length, lastWords.length, 6);
+    for (let len = maxCheck; len > 0; len--) {
+      const lastTail = lastWords.slice(-len).join(" ").toLowerCase();
+      const newHead = newWords.slice(0, len).join(" ").toLowerCase();
+      if (lastTail === newHead) {
+        overlapCount = len;
+        break;
+      }
+    }
+
+    if (overlapCount > 0) {
+      const remainingWords = newWords.slice(overlapCount);
+      return remainingWords.join(" ").trim();
+    }
+
+    return newText.trim();
+  };
+
+  // Helper to reset silence timer
   const resetSilenceTimers = () => {
     if (silenceTimeoutRef.current) {
       window.clearTimeout(silenceTimeoutRef.current);
     }
-    if (commitTimeoutRef.current) {
-      window.clearTimeout(commitTimeoutRef.current);
-    }
 
-    // Auto-commit interim text after 1.5s of pause if WebSpeech API hasn't fired isFinal
-    commitTimeoutRef.current = window.setTimeout(() => {
-      if (latestInterimRef.current.trim()) {
-        const rawToCommit = latestInterimRef.current.trim();
-        const textToCommit = ensurePeriod(rawToCommit);
-        latestInterimRef.current = "";
-        setInterimText("");
-
-        const now = new Date();
-        const timeString = now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-
-        const newItem: SubtitleItem = {
-          id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-          timestamp: timeString,
-          rawText: rawToCommit,
-          text: textToCommit,
-          confidence: 0.9,
-          isFinal: true,
-          createdAt: Date.now(),
-        };
-
-        setCurrentSubtitle(newItem);
-        setSubtitles((prev) => [...prev, newItem]);
-        refineSubtitleWithAI(newItem);
-      }
-    }, 1500);
-
-    // Quita el subtítulo completamente tras 4 segundos de silencio sin locución
+    // Quita el subtítulo en pantalla tras 4 segundos de silencio sin locución
     silenceTimeoutRef.current = window.setTimeout(() => {
       setInterimText("");
       setCurrentSubtitle(null);
@@ -392,35 +384,42 @@ const ensurePeriod = (str: string): string => {
             onFinalResult: (text, confidence) => {
               latestInterimRef.current = "";
               setInterimText("");
-              if (commitTimeoutRef.current) {
-                window.clearTimeout(commitTimeoutRef.current);
-              }
 
-              const formattedText = ensurePeriod(text);
+              // Deduplicate leading words that might overlap with the previous subtitle
+              setSubtitles((prev) => {
+                const lastSub = prev[prev.length - 1];
+                const cleanedRaw = deduplicateSubtitleText(text, lastSub?.rawText || lastSub?.text);
 
-              const now = new Date();
-              const timeString = now.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
+                if (!cleanedRaw || cleanedRaw.length < 2) {
+                  // Fully duplicated phrase or single artifact character, skip creating empty/loose subtitle
+                  return prev;
+                }
+
+                const formattedText = ensurePeriod(cleanedRaw);
+
+                const now = new Date();
+                const timeString = now.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                });
+
+                const newItem: SubtitleItem = {
+                  id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                  timestamp: timeString,
+                  rawText: cleanedRaw,
+                  text: formattedText,
+                  confidence,
+                  isFinal: true,
+                  createdAt: Date.now(),
+                };
+
+                setCurrentSubtitle(newItem);
+                resetSilenceTimers();
+                refineSubtitleWithAI(newItem);
+
+                return [...prev, newItem];
               });
-
-              const newItem: SubtitleItem = {
-                id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                timestamp: timeString,
-                rawText: text,
-                text: formattedText,
-                confidence,
-                isFinal: true,
-                createdAt: Date.now(),
-              };
-
-              setCurrentSubtitle(newItem);
-              setSubtitles((prev) => [...prev, newItem]);
-              resetSilenceTimers();
-
-              // Trigger AI refinement in background
-              refineSubtitleWithAI(newItem);
             },
             onError: (errMsg) => {
               console.warn("Speech recognition error:", errMsg);
