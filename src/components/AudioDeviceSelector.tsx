@@ -140,42 +140,51 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
               <div className="space-y-2">
                 {devices.map((device) => {
                   const isSelected = selectedDeviceId === device.deviceId;
-                  const isSystemAudio = device.deviceId === SYSTEM_AUDIO_DEVICE_ID;
-                  const DeviceIcon = isSystemAudio ? Monitor : Mic;
-                  return (
-                    <button
-                      key={device.deviceId}
-                      onClick={() => handleDeviceItemClick(device.deviceId)}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
-                        isSelected
-                          ? isSystemAudio
-                            ? "bg-emerald-500/10 border-emerald-500 text-white shadow-md"
-                            : "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
-                          : "bg-[#16161D] border-[#2A2A32] text-gray-300 hover:border-indigo-500/50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 truncate pr-2">
-                        <div
-                          className={`p-2 rounded-lg ${
-                            isSelected
-                              ? isSystemAudio
-                                ? "bg-emerald-600 text-white"
-                                : "bg-indigo-600 text-white"
-                              : "bg-[#2A2A32] text-[#6B6B76]"
-                          }`}
-                        >
-                          <DeviceIcon className="w-4 h-4" />
+                    const isVirtualMixer = /mixline|stereo|mix|cable|virtual|ndi|loopback|stream/i.test(device.label);
+                    const DeviceIcon = isSystemAudio ? Monitor : isVirtualMixer ? Sliders : Mic;
+                    return (
+                      <button
+                        key={device.deviceId}
+                        onClick={() => handleDeviceItemClick(device.deviceId)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
+                          isSelected
+                            ? isSystemAudio || isVirtualMixer
+                              ? "bg-emerald-500/10 border-emerald-500 text-white shadow-md"
+                              : "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
+                            : "bg-[#16161D] border-[#2A2A32] text-gray-300 hover:border-indigo-500/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 truncate pr-2">
+                          <div
+                            className={`p-2 rounded-lg ${
+                              isSelected
+                                ? isSystemAudio || isVirtualMixer
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-indigo-600 text-white"
+                                : "bg-[#2A2A32] text-[#6B6B76]"
+                            }`}
+                          >
+                            <DeviceIcon className="w-4 h-4" />
+                          </div>
+                          <div className="truncate">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium truncate">{device.label}</p>
+                              {isVirtualMixer && (
+                                <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                                  Mezclador PC / Apps
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#6B6B76] font-mono truncate">
+                              {isSystemAudio
+                                ? "getDisplayMedia • Captura de escritorio"
+                                : isVirtualMixer
+                                ? "Audio Virtual / Mezcla del Sistema (Mezcla todas las Apps)"
+                                : `Entrada Hardware • ${device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}`
+                              }
+                            </p>
+                          </div>
                         </div>
-                        <div className="truncate">
-                          <p className="text-sm font-medium truncate">{device.label}</p>
-                          <p className="text-[11px] text-[#6B6B76] font-mono truncate">
-                            {isSystemAudio
-                              ? "getDisplayMedia • Captura de escritorio"
-                              : `USB Audio • ${device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}`
-                            }
-                          </p>
-                        </div>
-                      </div>
                       {isSelected && (
                         <div className={`${isSystemAudio ? "bg-emerald-500" : "bg-indigo-500"} text-white p-1 rounded-full shrink-0`}>
                           <Check className="w-4 h-4" />
