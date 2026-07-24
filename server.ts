@@ -108,7 +108,18 @@ REGLAS STRICTAS DE TRADUCCIÓN, PRECISIÓN Y DIÁLOGOS:
       systemInstruction += `\n- PRIORIDAD HABLANTES: Si identificas los nombres, úsalos (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no los sabes, usa "- Hablante 1:\\n- Hablante 2:".`;
     }
 
-    const userPrompt = `${conversationContext ? `[CONTEXTO PREVIO]:\n${conversationContext}\n\n` : ""}[TEXTO A SUBTITULAR]:\n"${rawText}"`;
+    const srcLang = (sourceLanguage || "es").split("-")[0].toLowerCase();
+    const tgtLang = (targetLanguage || "es").split("-")[0].toLowerCase();
+    const isTranslation = srcLang !== tgtLang;
+
+    // Build user prompt — explicitly request translation when languages differ
+    let userPrompt = conversationContext ? `[CONTEXTO PREVIO]:\n${conversationContext}\n\n` : "";
+    if (isTranslation) {
+      userPrompt += `[INSTRUCCIÓN]: TRADUCE el siguiente texto del ${sourceLanguage} al ${targetLanguage}. Devuelve SOLAMENTE la traducción en ${targetLanguage}.\n\n`;
+    }
+    userPrompt += `[TEXTO A SUBTITULAR]:\n"${rawText}"`;
+
+    console.log(`[refine-subtitles] src=${sourceLanguage} tgt=${targetLanguage} translate=${isTranslation} raw="${rawText.substring(0, 60)}"`);
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
@@ -116,27 +127,27 @@ REGLAS STRICTAS DE TRADUCCIÓN, PRECISIÓN Y DIÁLOGOS:
       config: {
         systemInstruction,
         temperature: 0.0,
-        maxOutputTokens: 200,
+        maxOutputTokens: 300,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             cleanSubtitle: {
               type: Type.STRING,
-              description: `El subtítulo final TRADUCIDO al idioma de destino (${targetLanguage}). Si el idioma de destino (${targetLanguage}) es diferente al de origen (${sourceLanguage}), este campo OBLIGATORIAMENTE debe contener la traducción exacta al ${targetLanguage}. Si es un diálogo entre dos personas, incluye saltos de línea '\\n' y guiones '- '.`,
+              description: `The final subtitle text. If targetLanguage (${targetLanguage}) differs from sourceLanguage (${sourceLanguage}), this field MUST contain the TRANSLATED text in ${targetLanguage}. Never return the original language when translation is requested.`,
             },
             speaker: {
               type: Type.STRING,
-              description: "Nombre o etiqueta del hablante si se detecta un único hablante principal, o string vacío si es un diálogo multitexto.",
+              description: "Speaker name or empty string.",
             },
             detectedLanguage: {
               type: Type.STRING,
-              description: "Idioma principal detectado.",
+              description: "Detected source language.",
             },
             keyTerms: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "Palabras clave o conceptos importantes mencionados en este fragmento.",
+              description: "Key terms mentioned.",
             },
           },
           required: ["cleanSubtitle"],
@@ -146,14 +157,15 @@ REGLAS STRICTAS DE TRADUCCIÓN, PRECISIÓN Y DIÁLOGOS:
 
     const outputText = response.text || "{}";
     const data = JSON.parse(outputText);
+    console.log(`[refine-subtitles] result="${(data.cleanSubtitle || '').substring(0, 60)}"`);
     return res.json(data);
   } catch (error: any) {
-    // Return clean fallback without throwing 500 error or dumping full 429 stack
+    console.error(`[refine-subtitles] ERROR: ${error?.message || error}`);
     return res.json({
       cleanSubtitle: formatFallback(rawText),
       speaker: "",
       isFallback: true,
-      warning: "Fallback speech text used",
+      warning: `Gemini API error: ${error?.message || 'unknown'}`,
     });
   }
 });

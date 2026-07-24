@@ -299,6 +299,7 @@ const ensurePeriod = (str: string): string => {
 
       if (res.ok) {
         const data = await res.json();
+        console.log(`[refineSubtitleWithAI] isFallback=${data.isFallback}, result="${(data.cleanSubtitle || '').substring(0, 60)}"`);
         const refinedSubtitle: SubtitleItem = {
           ...rawItem,
           text: data.cleanSubtitle || rawItem.text,
@@ -315,9 +316,11 @@ const ensurePeriod = (str: string): string => {
 
         // Update active subtitle if still showing
         setCurrentSubtitle((prev) => (prev?.id === rawItem.id ? refinedSubtitle : prev));
+      } else {
+        console.error(`[refineSubtitleWithAI] HTTP ${res.status}: ${await res.text()}`);
       }
     } catch (err) {
-      // Quiet fail
+      console.error("[refineSubtitleWithAI] Error:", err);
     } finally {
       setIsAIRefining(false);
     }
