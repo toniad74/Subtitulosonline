@@ -140,8 +140,9 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
               <div className="space-y-2">
                 {devices.map((device) => {
                   const isSelected = selectedDeviceId === device.deviceId;
-                    const isVirtualMixer = /mixline|stereo|mix|cable|virtual|ndi|loopback|stream/i.test(device.label);
-                    const DeviceIcon = isSystemAudio ? Monitor : isVirtualMixer ? Sliders : Mic;
+                  const isSystemAudio = device.deviceId === SYSTEM_AUDIO_DEVICE_ID;
+                  const isVirtualMixer = /mixline|stereo|mix|cable|virtual|ndi|loopback|stream/i.test(device.label);
+                  const DeviceIcon = isSystemAudio ? Monitor : isVirtualMixer ? Sliders : Mic;
                     return (
                       <button
                         key={device.deviceId}
