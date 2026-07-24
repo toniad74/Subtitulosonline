@@ -93,12 +93,48 @@ export function formatProfessionalSubtitles(
     ].slice(-maxLines);
   }
 
-  // 3. SINGLE SPEAKER FALLBACK: word-wrapping to maxWordsPerLine
+  // 3. SINGLE SPEAKER FALLBACK: Smart EBU Line-Wrapping & Rebalancing
+  // Avoids isolated 1-word orphan lines (e.g., rebalances 11 words into 6 + 5 instead of 10 + 1)
   const words = clean.split(/\s+/);
-  const lines: string[] = [];
-  for (let i = 0; i < words.length; i += maxWordsPerLine) {
-    lines.push(words.slice(i, i + maxWordsPerLine).join(" "));
+
+  if (words.length <= maxWordsPerLine) {
+    return [clean];
   }
 
-  return lines.slice(-maxLines);
+  // If sentence has 2 parts divided by a period/punctuation, check if they form 2 natural balanced lines
+  const sentenceMatch = clean.match(/^(.+?[.!?])\s+(.+)$/);
+  if (sentenceMatch) {
+    const part1 = sentenceMatch[1].trim();
+    const part2 = sentenceMatch[2].trim();
+    const part1Words = part1.split(/\s+/).length;
+    const part2Words = part2.split(/\s+/).length;
+
+    // Avoid leaving a 1-word orphan line on either side
+    if (part1Words >= 2 && part2Words >= 2 && part1Words <= maxWordsPerLine + 3 && part2Words <= maxWordsPerLine + 3) {
+      return [part1, part2].slice(-maxLines);
+    }
+  }
+
+  // Rebalance line division so neither line has a single isolated word
+  const totalWords = words.length;
+  let bestSplit = Math.ceil(totalWords / 2);
+
+  // Search for punctuation (comma, semicolon) or conjunction near the midpoint to split naturally
+  for (let i = Math.max(2, bestSplit - 3); i <= Math.min(totalWords - 2, bestSplit + 3); i++) {
+    const prevWord = words[i - 1];
+    if (/[,;:]$/.test(prevWord) || /^(?:y|o|u|e|que|si|cuando|pero|porque|para|de|con|en|del|al|como|donde|mientras|aunque|sino)$/i.test(words[i])) {
+      bestSplit = i;
+      break;
+    }
+  }
+
+  // Ensure neither line has fewer than 2 words if total >= 4
+  if (totalWords >= 4) {
+    if (bestSplit < 2) bestSplit = 2;
+    if (totalWords - bestSplit < 2) bestSplit = totalWords - 2;
+  }
+
+  const line1 = words.slice(0, bestSplit).join(" ");
+  const line2 = words.slice(bestSplit).join(" ");
+  return [line1, line2].slice(-maxLines);
 }

@@ -142,8 +142,17 @@ const ensurePeriod = (str: string): string => {
     return trimmed;
   }
 
-  // If phrase ends with a conjunction/preposition (indicating mid-sentence pause), do NOT add a period
-  const trailingIncomplete = /\b(?:y|o|u|e|que|si|cuando|pero|porque|para|de|con|en|del|al|como|donde|mientras|aunque|ni|sino)\s*$/i.test(trimmed);
+  // Do NOT force a period on short fragments (< 4 words) unless it's a clear short response (Sí, No, Claro, Vale, Gracias)
+  const words = trimmed.split(/\s+/);
+  if (words.length < 4) {
+    const isStandaloneResponse = /^(?:sí|si|no|claro|vale|perfecto|entendido|gracias|bueno|hola|adiós)$/i.test(trimmed);
+    if (!isStandaloneResponse) {
+      return trimmed;
+    }
+  }
+
+  // If phrase ends with a conjunction/preposition/linking word, do NOT add a period
+  const trailingIncomplete = /\b(?:y|o|u|e|que|si|cuando|pero|porque|para|de|con|en|del|al|como|donde|mientras|aunque|ni|sino|así|también|además|luego|entonces)\s*$/i.test(trimmed);
   if (trailingIncomplete) {
     return trimmed;
   }
