@@ -117,6 +117,40 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
             </p>
           </div>
 
+          {/* API Keys Configuration */}
+          <div className="p-4 bg-[#16161D] border border-[#2A2A32] rounded-xl space-y-3">
+            <div className="flex items-center gap-2">
+              <Brain className="w-4 h-4 text-indigo-400" />
+              <span className="text-xs font-bold text-white">Claves de API (Traducción y Transcripción Client-Side)</span>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] text-[#6B6B76] font-semibold block mb-1">
+                  Google Gemini API Key (Traducción / Refinado)
+                </label>
+                <input
+                  type="password"
+                  value={settings.geminiApiKey || ""}
+                  onChange={(e) => onUpdateSettings({ geminiApiKey: e.target.value })}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-[#0E0E12] border border-[#2A2A32] rounded-lg px-3 py-1.5 text-xs text-white placeholder-[#4A4A52] focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-[#6B6B76] font-semibold block mb-1">
+                  Groq API Key (Whisper Large-V3 STT)
+                </label>
+                <input
+                  type="password"
+                  value={settings.groqApiKey || ""}
+                  onChange={(e) => onUpdateSettings({ groqApiKey: e.target.value })}
+                  placeholder="gsk_..."
+                  className="w-full bg-[#0E0E12] border border-[#2A2A32] rounded-lg px-3 py-1.5 text-xs text-white placeholder-[#4A4A52] focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Speaker Identification Toggle */}
           <div className="p-4 bg-[#16161D] border border-[#2A2A32] rounded-xl space-y-2">
             <div className="flex items-center justify-between">

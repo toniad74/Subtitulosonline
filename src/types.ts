@@ -49,6 +49,8 @@ export interface SubtitleSettings {
   maxLines: number; // Max lines per subtitle screen (e.g. 2)
   showInterim: boolean; // Whether to show word-by-word interim text or only complete phrases
   silenceTimeoutMs?: number; // Time in ms before clearing subtitle on silence (e.g. 2000)
+  geminiApiKey?: string; // Gemini API key for client-side AI refinement & translation
+  groqApiKey?: string; // Groq API key for Whisper Large-V3 client-side transcription
 }
 
 export interface ConversationSummary {

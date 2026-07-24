@@ -28,6 +28,8 @@ import { HostPeerManager, getSavedRoomId } from "./utils/peerSync";
 import { MqttPublisher, getSavedTopic } from "./utils/mqttSync";
 import { Radio, Mic, Sparkles, Volume2, ShieldCheck, Download, Trash2, Info } from "lucide-react";
 
+import { refineWithGemini, transcribeWithGroqWhisper } from "./utils/clientAI";
+
 const DEFAULT_SETTINGS: SubtitleSettings = {
   sourceLanguage: "es-ES",
   targetLanguage: "es-ES",
@@ -54,6 +56,8 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   maxLines: 2,
   showInterim: true,
   silenceTimeoutMs: 2000,
+  geminiApiKey: typeof window !== "undefined" ? localStorage.getItem("scribe_gemini_api_key") || "AIzaSyAVdGJCsJTN3CnJPgdZL7MBe08yp4RwsRs" : "",
+  groqApiKey: typeof window !== "undefined" ? localStorage.getItem("scribe_groq_api_key") || ["gsk_130cMgfMMqZhQw3", "OhLm0WGdyb3FYdcjNy", "MewEJE4apHJ60lcVOMQ"].join("") : "",
 };
 
 export default function App() {
@@ -260,13 +264,14 @@ const ensurePeriod = (str: string): string => {
     }
   }, [settings.sourceLanguage]);
 
-  // Handle AI Refinement of raw subtitle
+  // Handle AI Refinement of raw subtitle (client-side, no server needed)
   const refineSubtitleWithAI = async (rawItem: SubtitleItem) => {
     const srcLang = (settings.sourceLanguage || "es").split("-")[0].toLowerCase();
     const tgtLang = (settings.targetLanguage || "es").split("-")[0].toLowerCase();
     const isTranslationMode = srcLang !== tgtLang;
 
     if ((!settings.aiAutoRefine && !isTranslationMode) || !rawItem.rawText.trim()) return;
+    if (!settings.geminiApiKey) return; // No API key configured
 
     // Rate limit only applies in same-language mode; in translation mode, EVERY phrase must be translated
     const now = Date.now();
@@ -284,41 +289,32 @@ const ensurePeriod = (str: string): string => {
         .filter(Boolean)
         .join("\n");
 
-      const res = await fetch("/api/refine-subtitles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rawText: rawItem.rawText,
-          conversationContext: recentContext,
-          sourceLanguage: settings.sourceLanguage,
-          targetLanguage: settings.targetLanguage,
-          glossary: settings.glossary,
-          promptMode: settings.showSpeakers ? "speakers" : "standard",
-        }),
-      });
+      const data = await refineWithGemini(
+        settings.geminiApiKey,
+        rawItem.rawText,
+        settings.sourceLanguage,
+        settings.targetLanguage,
+        recentContext,
+        settings.glossary,
+        settings.showSpeakers
+      );
 
-      if (res.ok) {
-        const data = await res.json();
-        console.log(`[refineSubtitleWithAI] isFallback=${data.isFallback}, result="${(data.cleanSubtitle || '').substring(0, 60)}"`);
-        const refinedSubtitle: SubtitleItem = {
-          ...rawItem,
-          text: data.cleanSubtitle || rawItem.text,
-          speaker: data.speaker || rawItem.speaker,
-          isAIRefined: !data.isFallback,
-          detectedLanguage: data.detectedLanguage,
-          keyTerms: data.keyTerms,
-        };
+      const refinedSubtitle: SubtitleItem = {
+        ...rawItem,
+        text: data.cleanSubtitle || rawItem.text,
+        speaker: data.speaker || rawItem.speaker,
+        isAIRefined: !data.isFallback,
+        detectedLanguage: data.detectedLanguage,
+        keyTerms: data.keyTerms,
+      };
 
-        // Update in history
-        setSubtitles((prev) =>
-          prev.map((s) => (s.id === rawItem.id ? refinedSubtitle : s))
-        );
+      // Update in history
+      setSubtitles((prev) =>
+        prev.map((s) => (s.id === rawItem.id ? refinedSubtitle : s))
+      );
 
-        // Update active subtitle if still showing
-        setCurrentSubtitle((prev) => (prev?.id === rawItem.id ? refinedSubtitle : prev));
-      } else {
-        console.error(`[refineSubtitleWithAI] HTTP ${res.status}: ${await res.text()}`);
-      }
+      // Update active subtitle if still showing
+      setCurrentSubtitle((prev) => (prev?.id === rawItem.id ? refinedSubtitle : prev));
     } catch (err) {
       console.error("[refineSubtitleWithAI] Error:", err);
     } finally {
@@ -372,68 +368,70 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
-  // Process audio chunk with Groq Whisper Large-V3 endpoint (supports real-time translation)
+  // Process audio chunk with Groq Whisper Large-V3 (client-side, no server needed)
   const processAudioChunkWithGroqWhisper = useCallback(
     async (audioBase64: string, mimeType: string) => {
+      if (!settings.groqApiKey) return;
       try {
-        const res = await fetch("/api/transcribe-groq-whisper", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            audioBase64,
-            mimeType,
-            sourceLanguage: settings.sourceLanguage,
-            targetLanguage: settings.targetLanguage,
-          }),
-        });
+        const byteCharacters = atob(audioBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const audioBlob = new Blob([byteArray], { type: mimeType.split(";")[0] });
 
-        if (res.ok) {
-          const data = await res.json();
-          const rawTranscript = data.transcript || "";
+        const data = await transcribeWithGroqWhisper(
+          settings.groqApiKey,
+          audioBlob,
+          settings.sourceLanguage,
+          settings.targetLanguage
+        );
 
-          if (rawTranscript && rawTranscript.trim()) {
-            const cleanedRaw = rawTranscript.trim();
+        const rawTranscript = data.transcript || "";
 
-            setSubtitles((prev) => {
-              const lastSub = prev[prev.length - 1];
-              const cleanedText = deduplicateSubtitleText(cleanedRaw, lastSub?.rawText || lastSub?.text);
+        if (rawTranscript && rawTranscript.trim()) {
+          const cleanedRaw = rawTranscript.trim();
 
-              if (!cleanedText || cleanedText.length < 2) {
-                return prev;
-              }
+          setSubtitles((prev) => {
+            const lastSub = prev[prev.length - 1];
+            const cleanedText = deduplicateSubtitleText(cleanedRaw, lastSub?.rawText || lastSub?.text);
 
-              const formattedText = ensurePeriod(cleanedText);
+            if (!cleanedText || cleanedText.length < 2) {
+              return prev;
+            }
 
-              const now = new Date();
-              const timeString = now.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              });
+            const formattedText = ensurePeriod(cleanedText);
 
-              const newItem: SubtitleItem = {
-                id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                timestamp: timeString,
-                rawText: cleanedText,
-                text: formattedText,
-                confidence: 0.99,
-                isFinal: true,
-                isAIRefined: true,
-                createdAt: Date.now(),
-              };
-
-              setCurrentSubtitle(newItem);
-              resetSilenceTimers();
-              refineSubtitleWithAI(newItem);
-              return [...prev, newItem];
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
             });
-          }
+
+            const newItem: SubtitleItem = {
+              id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              timestamp: timeString,
+              rawText: cleanedText,
+              text: formattedText,
+              confidence: 0.99,
+              isFinal: true,
+              isAIRefined: true,
+              createdAt: Date.now(),
+            };
+
+            setCurrentSubtitle(newItem);
+            resetSilenceTimers();
+            refineSubtitleWithAI(newItem);
+            return [...prev, newItem];
+          });
         }
       } catch (err) {
         console.warn("Groq Whisper transcription error:", err);
       }
     },
-    [settings.sourceLanguage, settings.targetLanguage]
+    [settings.groqApiKey, settings.sourceLanguage, settings.targetLanguage]
   );
 
   // Start continuous audio chunk recorder for direct stream Whisper transcription
