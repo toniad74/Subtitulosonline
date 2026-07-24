@@ -170,12 +170,19 @@ app.post("/api/transcribe-audio", async (req, res) => {
       },
     };
 
-    const promptText = `Transcribe con total precisión el audio adjunto de la conversación.
-Idioma de origen esperado: ${sourceLanguage}.
-Idioma de salida para los subtítulos: ${targetLanguage}.
-${promptContext ? `Contexto adicional de la reunión/tema: ${promptContext}` : ""}
+    const promptText = `Eres un sistema avanzado de inteligencia acústica y diarización de voz (Acoustic Speaker Diarization) para subtitulado profesional EBU.
 
-Devuelve un JSON con la transcripción exacta, puntuación limpia, división en subtítulos legibles y etiquetas de hablantes si se aprecian voces distintas.`;
+Escucha atentamente la onda de audio adjunta y analiza las diferencias acústicas de las voces (tono de voz, timbre masculino/femenino, tono grave/agudo, pausas de locución).
+
+REGLAS DE DIÁLOGO POR TIPO DE VOZ:
+1. Si detectas DIÁLOGO o interlocutores con voces diferentes:
+   - DEBES colocar cada intervención de voz distinta en una LÍNEA SEPARADA con salto de línea '\\n', empezando con guión "- ".
+   - Ejemplo:
+     "- Hola, ¿qué tal?
+     - Muy bien, ¿y tú?"
+2. Si toda la locución del audio es de UNA MISMA VOZ, NO uses guiones "- ".
+3. Idioma origen: ${sourceLanguage}, Idioma salida: ${targetLanguage}.
+${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
@@ -189,14 +196,14 @@ Devuelve un JSON con la transcripción exacta, puntuación limpia, división en 
           properties: {
             transcript: {
               type: Type.STRING,
-              description: "Transcripción limpia y corregida.",
+              description: "Transcripción completa formateada con saltos de línea '\\n' y guiones '- ' si hay voces diferentes.",
             },
             subtitles: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  speaker: { type: Type.STRING },
+                  speaker: { type: Type.STRING, description: "Identificador de voz (ej: 'Voz 1 (Grave)', 'Voz 2 (Aguda)')" },
                   text: { type: Type.STRING },
                 },
                 required: ["text"],

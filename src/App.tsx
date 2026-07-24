@@ -251,9 +251,9 @@ const ensurePeriod = (str: string): string => {
   const refineSubtitleWithAI = async (rawItem: SubtitleItem) => {
     if (!settings.aiAutoRefine || !rawItem.rawText.trim()) return;
 
-    // Rate-limit AI calls (at most once every 2.5 seconds) to avoid Gemini API quota exhaustion
+    // Rate-limit AI calls (at most once every 1 second) to process subtitles quickly
     const now = Date.now();
-    if (now - lastRefineTimeRef.current < 2500) {
+    if (now - lastRefineTimeRef.current < 1000) {
       return;
     }
     lastRefineTimeRef.current = now;
