@@ -29,7 +29,7 @@ export class SpeechRecognitionService {
       this.recognition = new SpeechRecognitionClass();
       this.recognition.continuous = true;
       this.recognition.interimResults = true;
-      this.recognition.maxAlternatives = 1;
+      this.recognition.maxAlternatives = 3;
       this.setupListeners();
     } else {
       this.isSupported = false;
@@ -48,7 +48,8 @@ export class SpeechRecognitionService {
       this.isListening = false;
       this.callbacks?.onStatusChange(false);
 
-      // Instant auto restart for seamless continuous speech listening
+      // Ultra-fast auto restart for seamless continuous speech listening
+      // Minimal delay to avoid losing words between recognition cycles
       if (this.shouldKeepListening) {
         setTimeout(() => {
           if (this.shouldKeepListening) {
@@ -56,9 +57,15 @@ export class SpeechRecognitionService {
               this.recognition.start();
             } catch (e) {
               console.warn("Speech recognition restart failed:", e);
+              // Retry once more after a short delay
+              setTimeout(() => {
+                if (this.shouldKeepListening) {
+                  try { this.recognition.start(); } catch (_) {}
+                }
+              }, 100);
             }
           }
-        }, 50);
+        }, 10);
       }
     };
 
@@ -81,18 +88,29 @@ export class SpeechRecognitionService {
       let finalTranscript = "";
       let confidence = 0.9;
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
+      // Accumulate ALL results from index 0 to build the complete transcript
+      // This prevents losing words that were previously interim and not yet final
+      for (let i = 0; i < event.results.length; ++i) {
+        // Pick the best alternative (highest confidence)
+        let bestAlt = event.results[i][0];
+        for (let a = 1; a < event.results[i].length; a++) {
+          if (event.results[i][a].confidence > bestAlt.confidence) {
+            bestAlt = event.results[i][a];
+          }
+        }
+        const transcript = bestAlt.transcript;
+
         if (event.results[i].isFinal) {
           finalTranscript += transcript;
-          if (event.results[i][0].confidence) {
-            confidence = event.results[i][0].confidence;
+          if (bestAlt.confidence) {
+            confidence = Math.max(confidence, bestAlt.confidence);
           }
         } else {
           interimTranscript += transcript;
         }
       }
 
+      // Always emit interim even if it seems short — every word matters
       if (interimTranscript.trim()) {
         this.callbacks?.onInterimResult(interimTranscript);
       }

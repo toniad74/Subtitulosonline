@@ -46,8 +46,8 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   textBorderSize: "medium",
   textBorderColor: "#000000",
   autoScroll: true,
-  noiseSuppression: true,
-  echoCancellation: true,
+  noiseSuppression: false,
+  echoCancellation: false,
   autoGainControl: true,
   maxWordsPerLine: 10,
   maxLines: 2,
@@ -148,7 +148,7 @@ const ensurePeriod = (str: string): string => {
       window.clearTimeout(commitTimeoutRef.current);
     }
 
-    // Auto-commit interim text after 1s of pause if WebSpeech API hasn't fired isFinal
+    // Auto-commit interim text after 1.5s of pause if WebSpeech API hasn't fired isFinal
     commitTimeoutRef.current = window.setTimeout(() => {
       if (latestInterimRef.current.trim()) {
         const rawToCommit = latestInterimRef.current.trim();
@@ -177,14 +177,14 @@ const ensurePeriod = (str: string): string => {
         setSubtitles((prev) => [...prev, newItem]);
         refineSubtitleWithAI(newItem);
       }
-    }, 1000);
+    }, 1500);
 
-    // Quita el subtítulo completamente tras 3 segundos de silencio sin locución
+    // Quita el subtítulo completamente tras 4 segundos de silencio sin locución
     silenceTimeoutRef.current = window.setTimeout(() => {
       setInterimText("");
       setCurrentSubtitle(null);
       latestInterimRef.current = "";
-    }, 3000);
+    }, 4000);
   };
 
   // Save settings to localStorage
