@@ -85,13 +85,10 @@ export class SpeechRecognitionService {
 
     this.recognition.onresult = (event: any) => {
       let interimTranscript = "";
-      let finalTranscript = "";
-      let confidence = 0.9;
 
-      // Accumulate ALL results from index 0 to build the complete transcript
-      // This prevents losing words that were previously interim and not yet final
-      for (let i = 0; i < event.results.length; ++i) {
-        // Pick the best alternative (highest confidence)
+      // Only iterate through NEW results starting from event.resultIndex
+      // This prevents re-processing past final results and creating duplicated subtitles
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
         let bestAlt = event.results[i][0];
         for (let a = 1; a < event.results[i].length; a++) {
           if (event.results[i][a].confidence > bestAlt.confidence) {
@@ -101,22 +98,16 @@ export class SpeechRecognitionService {
         const transcript = bestAlt.transcript;
 
         if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-          if (bestAlt.confidence) {
-            confidence = Math.max(confidence, bestAlt.confidence);
+          if (transcript.trim()) {
+            this.callbacks?.onFinalResult(transcript.trim(), bestAlt.confidence || 0.9);
           }
         } else {
           interimTranscript += transcript;
         }
       }
 
-      // Always emit interim even if it seems short — every word matters
       if (interimTranscript.trim()) {
         this.callbacks?.onInterimResult(interimTranscript);
-      }
-
-      if (finalTranscript.trim()) {
-        this.callbacks?.onFinalResult(finalTranscript.trim(), confidence);
       }
     };
   }
