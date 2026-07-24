@@ -235,10 +235,10 @@ ${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
   }
 });
 
-// Groq Whisper Large-V3 Direct Audio Transcription Endpoint
+// Groq Whisper Large-V3 Direct Audio Transcription Endpoint (with instant translation support)
 app.post("/api/transcribe-groq-whisper", async (req, res) => {
   try {
-    const { audioBase64, mimeType = "audio/webm", sourceLanguage = "es" } = req.body;
+    const { audioBase64, mimeType = "audio/webm", sourceLanguage = "es", targetLanguage = "es" } = req.body;
     const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey) {
@@ -248,6 +248,10 @@ app.post("/api/transcribe-groq-whisper", async (req, res) => {
       return res.status(400).json({ error: "audioBase64 is required" });
     }
 
+    const srcLang = (sourceLanguage || "es").split("-")[0].toLowerCase();
+    const tgtLang = (targetLanguage || "es").split("-")[0].toLowerCase();
+    const isTranslationMode = srcLang !== tgtLang;
+
     // Convert Base64 to Buffer & Blob for FormData
     const buffer = Buffer.from(audioBase64, "base64");
     const blob = new Blob([buffer], { type: mimeType.split(";")[0] });
@@ -255,10 +259,18 @@ app.post("/api/transcribe-groq-whisper", async (req, res) => {
     const formData = new FormData();
     formData.append("file", blob, "audio.webm");
     formData.append("model", "whisper-large-v3");
-    formData.append("language", sourceLanguage.split("-")[0]);
     formData.append("response_format", "verbose_json");
 
-    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    // If target language is English, use Groq Whisper direct audio translation endpoint for 100ms translation
+    const endpoint = isTranslationMode && tgtLang === "en"
+      ? "https://api.groq.com/openai/v1/audio/translations"
+      : "https://api.groq.com/openai/v1/audio/transcriptions";
+
+    if (!isTranslationMode || tgtLang !== "en") {
+      formData.append("language", srcLang);
+    }
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -273,12 +285,29 @@ app.post("/api/transcribe-groq-whisper", async (req, res) => {
     }
 
     const data = await response.json();
-    const rawTranscript = data.text || "";
+    let rawTranscript = (data.text || "").trim();
+
+    // If translating to a non-English target language (e.g. French, German, Italian, Portuguese)
+    if (isTranslationMode && tgtLang !== "en" && rawTranscript) {
+      try {
+        const ai = getGenAI();
+        const transRes = await ai.models.generateContent({
+          model: "gemini-3.6-flash",
+          contents: `Traduce el siguiente texto del idioma ${sourceLanguage} al idioma ${targetLanguage} de forma directa, fluida y profesional. Devuelve ÚNICAMENTE la traducción:\n"${rawTranscript}"`,
+          config: { temperature: 0.0 }
+        });
+        if (transRes.text) {
+          rawTranscript = transRes.text.trim();
+        }
+      } catch (err) {
+        console.warn("Gemini translation error:", err);
+      }
+    }
 
     return res.json({
       transcript: rawTranscript,
       segments: data.segments || [],
-      language: data.language || sourceLanguage,
+      language: targetLanguage,
       engine: "Groq Whisper Large-V3",
     });
   } catch (error: any) {

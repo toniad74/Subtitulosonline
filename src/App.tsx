@@ -369,7 +369,7 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
-  // Process audio chunk with Groq Whisper Large-V3 endpoint
+  // Process audio chunk with Groq Whisper Large-V3 endpoint (supports real-time translation)
   const processAudioChunkWithGroqWhisper = useCallback(
     async (audioBase64: string, mimeType: string) => {
       try {
@@ -380,6 +380,7 @@ const ensurePeriod = (str: string): string => {
             audioBase64,
             mimeType,
             sourceLanguage: settings.sourceLanguage,
+            targetLanguage: settings.targetLanguage,
           }),
         });
 
@@ -429,7 +430,7 @@ const ensurePeriod = (str: string): string => {
         console.warn("Groq Whisper transcription error:", err);
       }
     },
-    [settings.sourceLanguage]
+    [settings.sourceLanguage, settings.targetLanguage]
   );
 
   // Start continuous audio chunk recorder for direct stream Whisper transcription
