@@ -78,28 +78,28 @@ app.post("/api/refine-subtitles", async (req, res) => {
   try {
     const ai = getGenAI();
 
-    let systemInstruction = `Eres un ingeniero senior de subtitulación profesional (estándar EBU / Netflix broadcast).
-Tu objetivo es tomar transcripciones parciales o crudas y generar subtítulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+    let systemInstruction = `Eres un corrector ortográfico y subtitulador profesional senior (estándar RAE / EBU broadcast).
+Tu prioridad absoluta es la PRECISIÓN LÉXICA Y ORTOGRÁFICA. 
 
-REGLAS OBLIGATORIAS DE SUBTITULACIÓN DE DIÁLOGOS:
-1. Analiza el texto actual y el contexto conversacional previo. Si detectas un DIÁLOGO o cambio de interlocutor (dos personas distintas hablando), DEBES separar a cada hablante en una LÍNEA DIFERENTE separada por salto de línea '\\n', prefijando cada línea con guión "- ".
-   Ejemplo de diálogo formateado:
-   "- ¿Qué hora es?
-   - Son las tres de la tarde."
-2. Si el texto pertenece a UN SOLO hablante, NO uses guión inicial "- ". Mantenlo en 1 o 2 líneas normales sin guiones.
-3. Puntuación perfecta: agrega puntos, comas, signos de interrogación (¿?) y exclamación (¡!) según el tono de la conversación.
-4. Máximo 42 caracteres por línea (estándar broadcast).
-5. Mantén la fidelidad de las palabras expresadas sin alterar el significado.
+REGLAS STRICTAS DE PRECISIÓN Y DIÁLOGOS:
+1. ORTOGRAFÍA PERFECTA (RAE): Aplica con rigor las reglas de ortografía del español (tildes, tildes diacríticas, acentuación correcta, b/v, c/s/z, h, g/j, signos de puntuación e interrogación/exclamación ¿? ¡!).
+2. CERO PALABRAS INVENTADAS: NUNCA inventes palabras, no supongas palabras no pronunciadas y no uses términos inexistentes en el diccionario. Si una palabra no está clara, mantén la más cercana fonéticamente real en español.
+3. DIÁLOGOS: Si detectas que están hablando dos o más interlocutores (diálogo), DEBES colocar a cada parlante en una LÍNEA SEPARADA con salto de línea '\\n', prefijando cada línea con guión "- ".
+   Ejemplo de diálogo:
+   "- ¿Vas a venir mañana?
+   - Sí, a primera hora."
+4. Si habla una sola persona, NO uses guiones de diálogo.
+5. Fidelidad total al significado y al vocabulario pronunciado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subtítulos deseado: ${targetLanguage}`;
 
     if (glossary) {
-      systemInstruction += `\n- Glosario / Términos técnicos prioritarios: ${glossary}`;
+      systemInstruction += `\n- Glosario de términos técnicos autorizados: ${glossary}`;
     }
 
     if (promptMode === "speakers") {
-      systemInstruction += `\n- PRIORIDAD: Si identificas a los hablantes, usa etiquetas (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no sabes el nombre, usa "- Hablante 1:\\n- Hablante 2:".`;
+      systemInstruction += `\n- PRIORIDAD HABLANTES: Si identificas los nombres, úsalos (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no los sabes, usa "- Hablante 1:\\n- Hablante 2:".`;
     }
 
     const userPrompt = `${conversationContext ? `[CONTEXTO PREVIO]:\n${conversationContext}\n\n` : ""}[TEXTO A SUBTITULAR]:\n"${rawText}"`;
@@ -109,7 +109,7 @@ REGLAS OBLIGATORIAS DE SUBTITULACIÓN DE DIÁLOGOS:
       contents: userPrompt,
       config: {
         systemInstruction,
-        temperature: 0.1,
+        temperature: 0.0,
         maxOutputTokens: 200,
         responseMimeType: "application/json",
         responseSchema: {
@@ -190,6 +190,7 @@ ${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
         parts: [audioPart, { text: promptText }],
       },
       config: {
+        temperature: 0.0,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
