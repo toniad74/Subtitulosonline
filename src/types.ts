@@ -19,6 +19,8 @@ export interface SubtitleItem {
   createdAt: number; // Date.now()
 }
 
+export type SubtitleDisplayStyle = 'cinema' | 'glass' | 'neon' | 'light' | 'minimal';
+
 export type PillShape = 'none' | 'sm' | 'md' | 'lg' | 'full';
 
 export interface SubtitleSettings {

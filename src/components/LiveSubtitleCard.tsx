@@ -66,10 +66,6 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
     "3xl": "text-4xl sm:text-5xl font-extrabold tracking-tight",
   };
 
-  const fontFamilyMap: Record<string, { name: string; fontCss: string }> = {};
-  DEFAULT_FONTS.forEach((f) => {
-    fontFamilyMap[f.id] = { name: f.name, fontCss: f.fontCss };
-  });
 
   // Subtitle text styling (Color + Shadow outline + Font)
   // NOTE: We use only text-shadow for outlines, NOT WebkitTextStroke

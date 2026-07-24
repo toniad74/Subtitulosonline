@@ -22,15 +22,6 @@ const hexToRgba = (hex: string, opacity: number = 90) => {
   return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
 };
 
-const fontFamilyMap: Record<string, string> = {
-  inter: "'Inter', sans-serif",
-  oswald: "'Oswald', sans-serif",
-  montserrat: "'Montserrat', sans-serif",
-  playfair: "'Playfair Display', serif",
-  firacode: "'Fira Code', monospace",
-  quicksand: "'Quicksand', sans-serif",
-  caveat: "'Caveat', cursive",
-};
 
 const fontSizeClasses: Record<string, string> = {
   sm: "text-lg sm:text-xl font-medium",
