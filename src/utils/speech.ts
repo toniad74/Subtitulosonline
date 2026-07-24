@@ -86,14 +86,20 @@ export class SpeechRecognitionService {
     this.recognition.onresult = (event: any) => {
       let interimTranscript = "";
 
-      for (let i = 0; i < event.results.length; ++i) {
-        const result = event.results[i];
-        if (!result || !result[0]) continue;
-        const transcript = result[0].transcript || "";
+      // Only iterate through NEW results starting from event.resultIndex
+      // This prevents re-processing past final results and creating duplicated subtitles
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let bestAlt = event.results[i][0];
+        for (let a = 1; a < event.results[i].length; a++) {
+          if (event.results[i][a].confidence > bestAlt.confidence) {
+            bestAlt = event.results[i][a];
+          }
+        }
+        const transcript = bestAlt.transcript;
 
-        if (result.isFinal) {
-          if (i >= event.resultIndex && transcript.trim()) {
-            this.callbacks?.onFinalResult(transcript.trim(), result[0].confidence || 0.9);
+        if (event.results[i].isFinal) {
+          if (transcript.trim()) {
+            this.callbacks?.onFinalResult(transcript.trim(), bestAlt.confidence || 0.9);
           }
         } else {
           interimTranscript += transcript;

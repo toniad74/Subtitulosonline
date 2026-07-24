@@ -84,7 +84,6 @@ export default function App() {
 
   // Services & Audio Context Refs
   const speechServiceRef = useRef<SpeechRecognitionService | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const levelIntervalRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
@@ -129,16 +128,6 @@ export default function App() {
     return () => {
       if (bcRef.current) {
         bcRef.current.close();
-      }
-    };
-  }, []);
-
-  // Initialize Speech Recognition Service
-  useEffect(() => {
-    speechServiceRef.current = new SpeechRecognitionService();
-    return () => {
-      if (speechServiceRef.current) {
-        speechServiceRef.current.stop();
       }
     };
   }, []);
@@ -366,120 +355,6 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
-  // Process audio chunk with Gemini 3.6 Flash multimodal audio endpoint
-  const processAudioChunkWithAI = useCallback(
-    async (audioBase64: string, mimeType: string) => {
-      try {
-        const res = await fetch("/api/transcribe-audio", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            audioBase64,
-            mimeType,
-            sourceLanguage: settings.sourceLanguage,
-            targetLanguage: settings.targetLanguage,
-            promptContext: settings.glossary,
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const rawTranscript = data.transcript || "";
-
-          if (rawTranscript && rawTranscript.trim()) {
-            const cleanedRaw = rawTranscript.trim();
-
-            setSubtitles((prev) => {
-              const lastSub = prev[prev.length - 1];
-              const cleanedText = deduplicateSubtitleText(cleanedRaw, lastSub?.rawText || lastSub?.text);
-
-              if (!cleanedText || cleanedText.length < 2) {
-                return prev;
-              }
-
-              const formattedText = ensurePeriod(cleanedText);
-
-              const now = new Date();
-              const timeString = now.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              });
-
-              const newItem: SubtitleItem = {
-                id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                timestamp: timeString,
-                rawText: cleanedText,
-                text: formattedText,
-                confidence: 0.95,
-                isFinal: true,
-                isAIRefined: true,
-                createdAt: Date.now(),
-              };
-
-              setCurrentSubtitle(newItem);
-              resetSilenceTimers();
-              return [...prev, newItem];
-            });
-          }
-        }
-      } catch (err) {
-        console.warn("Audio chunk transcription error:", err);
-      }
-    },
-    [settings.sourceLanguage, settings.targetLanguage, settings.glossary]
-  );
-
-  // Start continuous audio chunk recorder for direct stream AI transcription
-  const startAudioChunkRecorder = (stream: MediaStream) => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (_) {}
-    }
-
-    try {
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : "";
-
-      const options = mimeType ? { mimeType } : undefined;
-      const recorder = new MediaRecorder(stream, options);
-
-      recorder.ondataavailable = async (e) => {
-        if (e.data && e.data.size > 1000) {
-          try {
-            const base64 = await blobToBase64(e.data);
-            if (base64) {
-              processAudioChunkWithAI(base64, options?.mimeType || "audio/webm");
-            }
-          } catch (err) {
-            console.warn("Error converting audio chunk to base64:", err);
-          }
-        }
-      };
-
-      // Request data slice every 3.5 seconds
-      recorder.start(3500);
-      mediaRecorderRef.current = recorder;
-    } catch (err) {
-      console.warn("Could not start MediaRecorder:", err);
-    }
-  };
-
-  const stopAudioChunkRecorder = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (_) {}
-    }
-    mediaRecorderRef.current = null;
-  };
-
   // Toggle Listening State
   const handleToggleListening = async () => {
     if (isListening) {
@@ -487,7 +362,6 @@ const ensurePeriod = (str: string): string => {
       if (speechServiceRef.current) {
         speechServiceRef.current.stop();
       }
-      stopAudioChunkRecorder();
       setIsListening(false);
       setInterimText("");
       setCurrentSubtitle(null);
@@ -509,9 +383,6 @@ const ensurePeriod = (str: string): string => {
         alert("No se pudo acceder al dispositivo de entrada de audio seleccionado. Revisa los permisos.");
         return;
       }
-
-      // Start continuous audio chunk recorder (captures MIXLINE Stream / Virtual Cable / System Audio / Mic directly)
-      startAudioChunkRecorder(stream);
 
       if (!speechServiceRef.current) {
         speechServiceRef.current = new SpeechRecognitionService();
