@@ -84,6 +84,7 @@ export default function App() {
 
   // Services & Audio Context Refs
   const speechServiceRef = useRef<SpeechRecognitionService | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const levelIntervalRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
@@ -355,6 +356,119 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
+  // Process audio chunk with Groq Whisper Large-V3 endpoint
+  const processAudioChunkWithGroqWhisper = useCallback(
+    async (audioBase64: string, mimeType: string) => {
+      try {
+        const res = await fetch("/api/transcribe-groq-whisper", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            audioBase64,
+            mimeType,
+            sourceLanguage: settings.sourceLanguage,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const rawTranscript = data.transcript || "";
+
+          if (rawTranscript && rawTranscript.trim()) {
+            const cleanedRaw = rawTranscript.trim();
+
+            setSubtitles((prev) => {
+              const lastSub = prev[prev.length - 1];
+              const cleanedText = deduplicateSubtitleText(cleanedRaw, lastSub?.rawText || lastSub?.text);
+
+              if (!cleanedText || cleanedText.length < 2) {
+                return prev;
+              }
+
+              const formattedText = ensurePeriod(cleanedText);
+
+              const now = new Date();
+              const timeString = now.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+
+              const newItem: SubtitleItem = {
+                id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                timestamp: timeString,
+                rawText: cleanedText,
+                text: formattedText,
+                confidence: 0.99,
+                isFinal: true,
+                isAIRefined: true,
+                createdAt: Date.now(),
+              };
+
+              setCurrentSubtitle(newItem);
+              resetSilenceTimers();
+              refineSubtitleWithAI(newItem);
+              return [...prev, newItem];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Groq Whisper transcription error:", err);
+      }
+    },
+    [settings.sourceLanguage]
+  );
+
+  // Start continuous audio chunk recorder for direct stream Whisper transcription
+  const startAudioChunkRecorder = (stream: MediaStream) => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (_) {}
+    }
+
+    try {
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "";
+
+      const options = mimeType ? { mimeType } : undefined;
+      const recorder = new MediaRecorder(stream, options);
+
+      recorder.ondataavailable = async (e) => {
+        if (e.data && e.data.size > 1000) {
+          try {
+            const base64 = await blobToBase64(e.data);
+            if (base64) {
+              processAudioChunkWithGroqWhisper(base64, options?.mimeType || "audio/webm");
+            }
+          } catch (err) {
+            console.warn("Error converting audio chunk to base64:", err);
+          }
+        }
+      };
+
+      // Slice audio every 3.5 seconds for direct Whisper Large-V3 transcription
+      recorder.start(3500);
+      mediaRecorderRef.current = recorder;
+    } catch (err) {
+      console.warn("Could not start MediaRecorder for Whisper:", err);
+    }
+  };
+
+  const stopAudioChunkRecorder = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (_) {}
+    }
+    mediaRecorderRef.current = null;
+  };
+
   // Toggle Listening State
   const handleToggleListening = async () => {
     if (isListening) {
@@ -362,6 +476,7 @@ const ensurePeriod = (str: string): string => {
       if (speechServiceRef.current) {
         speechServiceRef.current.stop();
       }
+      stopAudioChunkRecorder();
       setIsListening(false);
       setInterimText("");
       setCurrentSubtitle(null);
@@ -383,6 +498,9 @@ const ensurePeriod = (str: string): string => {
         alert("No se pudo acceder al dispositivo de entrada de audio seleccionado. Revisa los permisos.");
         return;
       }
+
+      // Start Groq Whisper Large-V3 audio chunk recorder for direct stream audio capture
+      startAudioChunkRecorder(stream);
 
       if (!speechServiceRef.current) {
         speechServiceRef.current = new SpeechRecognitionService();

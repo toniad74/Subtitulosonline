@@ -230,6 +230,58 @@ ${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
   }
 });
 
+// Groq Whisper Large-V3 Direct Audio Transcription Endpoint
+app.post("/api/transcribe-groq-whisper", async (req, res) => {
+  try {
+    const { audioBase64, mimeType = "audio/webm", sourceLanguage = "es" } = req.body;
+    const apiKey = process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: "GROQ_API_KEY not configured in server .env" });
+    }
+    if (!audioBase64) {
+      return res.status(400).json({ error: "audioBase64 is required" });
+    }
+
+    // Convert Base64 to Buffer & Blob for FormData
+    const buffer = Buffer.from(audioBase64, "base64");
+    const blob = new Blob([buffer], { type: mimeType.split(";")[0] });
+
+    const formData = new FormData();
+    formData.append("file", blob, "audio.webm");
+    formData.append("model", "whisper-large-v3");
+    formData.append("language", sourceLanguage.split("-")[0]);
+    formData.append("response_format", "verbose_json");
+
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn("Groq Whisper API response error:", errText);
+      return res.status(response.status).json({ error: errText });
+    }
+
+    const data = await response.json();
+    const rawTranscript = data.text || "";
+
+    return res.json({
+      transcript: rawTranscript,
+      segments: data.segments || [],
+      language: data.language || sourceLanguage,
+      engine: "Groq Whisper Large-V3",
+    });
+  } catch (error: any) {
+    console.error("Error in /api/transcribe-groq-whisper:", error);
+    return res.status(500).json({ error: error?.message || "Error calling Groq Whisper API" });
+  }
+});
+
 // Summarize conversation history with AI
 app.post("/api/summarize-conversation", async (req, res) => {
   try {
