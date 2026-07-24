@@ -132,6 +132,16 @@ export default function App() {
     };
   }, []);
 
+  // Initialize Speech Recognition Service
+  useEffect(() => {
+    speechServiceRef.current = new SpeechRecognitionService();
+    return () => {
+      if (speechServiceRef.current) {
+        speechServiceRef.current.stop();
+      }
+    };
+  }, []);
+
 const ensurePeriod = (str: string): string => {
   const trimmed = str.trim();
   if (!trimmed) return "";
@@ -382,6 +392,10 @@ const ensurePeriod = (str: string): string => {
       if (!stream) {
         alert("No se pudo acceder al dispositivo de entrada de audio seleccionado. Revisa los permisos.");
         return;
+      }
+
+      if (!speechServiceRef.current) {
+        speechServiceRef.current = new SpeechRecognitionService();
       }
 
       if (speechServiceRef.current) {
