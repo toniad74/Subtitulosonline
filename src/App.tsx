@@ -13,7 +13,6 @@ import {
   blobToBase64,
 } from "./utils/audio";
 import { SpeechRecognitionService } from "./utils/speech";
-import { hasGeminiApiKey, transcribeAudioWithGemini } from "./utils/geminiClient";
 import {
   exportToSRT,
   exportToVTT,
@@ -356,98 +355,12 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
-  const systemAudioRecorderRef = useRef<MediaRecorder | null>(null);
-
-  // Helper to continuously record audio chunks and transcribe with Gemini client-side API
-  const startSystemAudioChunks = (stream: MediaStream) => {
-    try {
-      if (systemAudioRecorderRef.current && systemAudioRecorderRef.current.state !== "inactive") {
-        systemAudioRecorderRef.current.stop();
-      }
-
-      // Check for Gemini API key
-      if (!hasGeminiApiKey()) {
-        console.warn("No Gemini API key configured — system audio transcription disabled. Add key in AI Settings.");
-        return;
-      }
-
-      let mediaOptions: MediaRecorderOptions | undefined = undefined;
-      if (typeof MediaRecorder !== "undefined") {
-        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-          mediaOptions = { mimeType: "audio/webm;codecs=opus" };
-        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-          mediaOptions = { mimeType: "audio/webm" };
-        }
-      }
-
-      const recorder = new MediaRecorder(stream, mediaOptions);
-      systemAudioRecorderRef.current = recorder;
-
-      recorder.ondataavailable = async (e) => {
-        if (e.data && e.data.size > 500) {
-          try {
-            const base64 = await blobToBase64(e.data);
-            const result = await transcribeAudioWithGemini(
-              base64,
-              recorder.mimeType || "audio/webm",
-              settings.sourceLanguage,
-              settings.targetLanguage,
-              settings.glossary
-            );
-
-            if (result && result.transcript && result.transcript.trim()) {
-              const text = result.transcript.trim();
-
-              setSubtitles((prev) => {
-                const lastSub = prev[prev.length - 1];
-                const cleanedRaw = deduplicateSubtitleText(text, lastSub?.rawText || lastSub?.text);
-                if (!cleanedRaw || cleanedRaw.length < 2) return prev;
-
-                const formattedText = ensurePeriod(cleanedRaw);
-                const now = new Date();
-                const timeString = now.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                });
-
-                const newItem: SubtitleItem = {
-                  id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                  timestamp: timeString,
-                  rawText: cleanedRaw,
-                  text: formattedText,
-                  confidence: 0.95,
-                  isFinal: true,
-                  isAIRefined: true,
-                  createdAt: Date.now(),
-                };
-
-                setCurrentSubtitle(newItem);
-                resetSilenceTimers();
-                return [...prev, newItem];
-              });
-            }
-          } catch (err) {
-            console.warn("Gemini client chunk transcription error:", err);
-          }
-        }
-      };
-
-      recorder.start(1500); // 1.5s audio chunk interval for near-real-time
-    } catch (err) {
-      console.warn("Could not start MediaRecorder audio stream:", err);
-    }
-  };
-
   // Toggle Listening State
   const handleToggleListening = async () => {
     if (isListening) {
       // Stop listening
       if (speechServiceRef.current) {
         speechServiceRef.current.stop();
-      }
-      if (systemAudioRecorderRef.current && systemAudioRecorderRef.current.state !== "inactive") {
-        systemAudioRecorderRef.current.stop();
       }
       setIsListening(false);
       setInterimText("");
@@ -470,9 +383,6 @@ const ensurePeriod = (str: string): string => {
         alert("No se pudo acceder al dispositivo de entrada de audio seleccionado. Revisa los permisos.");
         return;
       }
-
-      // Start multimodal audio recorder for system / vMix audio streams
-      startSystemAudioChunks(stream);
 
       if (speechServiceRef.current) {
         speechServiceRef.current.start(

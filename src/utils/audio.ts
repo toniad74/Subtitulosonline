@@ -86,65 +86,30 @@ export async function getAudioStream(
  * Returns a MediaStream with ONLY audio tracks (video tracks are stopped immediately).
  */
 export async function getSystemAudioStream(): Promise<MediaStream> {
-  // 1. Attempt getDisplayMedia (Native Browser Screen / Tab Audio Share)
-  try {
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      } as any,
-    });
-
-    displayStream.getVideoTracks().forEach((track) => track.stop());
-
-    const audioTracks = displayStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      return new MediaStream(audioTracks);
-    }
-
-    // Stop empty tracks if no audio track was provided by Chrome
-    displayStream.getTracks().forEach((t) => t.stop());
-    console.warn("getDisplayMedia returned 0 audio tracks for selected window/screen. Falling back to system virtual input.");
-  } catch (err: any) {
-    if (err.name === "NotAllowedError") {
-      throw new Error("Selección de pantalla cancelada por el usuario.");
-    }
-    console.warn("getDisplayMedia warning:", err);
-  }
-
-  // 2. FALLBACK A: Search for Windows Stereo Mix / NDI Audio / Virtual Cable / Loopback devices
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const systemDevice = devices.find(
-      (d) =>
-        d.kind === "audioinput" &&
-        /mezcla|stereo|mix|cable|virtual|ndi|loopback|desktop|system/i.test(d.label)
-    );
-
-    if (systemDevice) {
-      return await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: { exact: systemDevice.deviceId },
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
-    }
-  } catch (fallbackErr) {
-    console.warn("Virtual input device fallback failed:", fallbackErr);
-  }
-
-  // 3. FALLBACK B: Default audio input with audio processing turned off
-  return await navigator.mediaDevices.getUserMedia({
+  const displayStream = await navigator.mediaDevices.getDisplayMedia({
+    video: true, // Required by spec, but we'll discard it
     audio: {
       echoCancellation: false,
       noiseSuppression: false,
       autoGainControl: false,
-    },
+      sampleRate: { ideal: 48000 },
+    } as any,
   });
+
+  // Stop video tracks immediately — we only want audio
+  displayStream.getVideoTracks().forEach((track) => track.stop());
+
+  const audioTracks = displayStream.getAudioTracks();
+  if (audioTracks.length === 0) {
+    // User may have shared screen without audio checked
+    displayStream.getTracks().forEach((t) => t.stop());
+    throw new Error(
+      "No se capturó audio del sistema. Asegúrate de marcar 'Compartir audio' en el diálogo del navegador."
+    );
+  }
+
+  // Return a clean stream with only audio
+  return new MediaStream(audioTracks);
 }
 
 /**

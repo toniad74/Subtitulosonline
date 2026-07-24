@@ -1,8 +1,7 @@
-import React, { useState } from "react";
-import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type, Laptop, SquareDot, Key } from "lucide-react";
+import React from "react";
+import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type, Laptop, SquareDot } from "lucide-react";
 import { SubtitleSettings } from "../types";
 import { DEFAULT_FONTS, getInstalledSystemFonts, FontOption } from "../utils/fonts";
-import { getGeminiApiKey, setGeminiApiKey } from "../utils/geminiClient";
 
 interface AISettingsPanelProps {
   isOpen: boolean;
@@ -30,13 +29,7 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
   settings,
   onUpdateSettings,
 }) => {
-  const [apiKey, setApiKey] = useState(() => getGeminiApiKey() || "");
   if (!isOpen) return null;
-
-  const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
-    setGeminiApiKey(key);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -120,35 +113,7 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
               />
             </div>
             <p className="text-[11px] text-[#E0E0E6] leading-relaxed">
-              Utiliza Gemini para corregir la puntuación, unir frases naturales, eliminar repeticiones de la voz y traducir automáticamente los subtítulos.
-            </p>
-          </div>
-
-          {/* Gemini API Key Card */}
-          <div className="p-4 bg-[#16161D] border border-indigo-500/30 rounded-xl space-y-2">
-            <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold text-white">Clave API de Google Gemini (Gratuita)</span>
-            </div>
-            <p className="text-[11px] text-[#A0A0AB] leading-relaxed">
-              Introduce tu clave API de Gemini para habilitar la transcripción directa del audio del sistema y vMix en el navegador.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="password"
-                placeholder="Pega aquí tu Gemini API Key (AIzaSy...)"
-                value={apiKey}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-                className="flex-1 bg-[#0E0E12] border border-[#2A2A32] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 font-mono"
-              />
-              {apiKey && (
-                <span className="text-[10px] text-emerald-400 font-bold px-2 py-1 bg-emerald-500/10 rounded border border-emerald-500/20 shrink-0 flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Configurada
-                </span>
-              )}
-            </div>
-            <p className="text-[10px] text-gray-500 pt-0.5">
-              ¿No tienes clave? Obtén una gratis en <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">Google AI Studio</a>.
+              Utiliza Gemini 3.6 Flash para corregir la puntuación, unir frases naturales, eliminar repeticiones de la voz y traducir automáticamente los subtítulos.
             </p>
           </div>
 

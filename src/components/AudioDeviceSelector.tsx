@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Mic, Monitor, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square, ExternalLink } from "lucide-react";
+import { Mic, Monitor, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square } from "lucide-react";
 import { AudioDeviceOption, SubtitleSettings } from "../types";
-import { SYSTEM_AUDIO_DEVICE_ID, getSystemAudioStream } from "../utils/audio";
+import { SYSTEM_AUDIO_DEVICE_ID } from "../utils/audio";
 
 interface AudioDeviceSelectorProps {
   isOpen: boolean;
@@ -33,21 +33,6 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   if (!isOpen) return null;
-
-  const handleDeviceItemClick = async (deviceId: string) => {
-    if (deviceId === SYSTEM_AUDIO_DEVICE_ID) {
-      try {
-        // Trigger getSystemAudioStream directly inside user click handler to guarantee browser popup window
-        await getSystemAudioStream();
-        onSelectDevice(deviceId);
-        onClose();
-      } catch (err: any) {
-        alert(err.message || "No se seleccionó ninguna fuente de audio del sistema.");
-      }
-    } else {
-      onSelectDevice(deviceId);
-    }
-  };
 
   const handleStartTest = () => {
     if (!activeStream) return;
@@ -141,51 +126,41 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                 {devices.map((device) => {
                   const isSelected = selectedDeviceId === device.deviceId;
                   const isSystemAudio = device.deviceId === SYSTEM_AUDIO_DEVICE_ID;
-                  const isVirtualMixer = /mixline|stereo|mix|cable|virtual|ndi|loopback|stream/i.test(device.label);
-                  const DeviceIcon = isSystemAudio ? Monitor : isVirtualMixer ? Sliders : Mic;
-                    return (
-                      <button
-                        key={device.deviceId}
-                        onClick={() => handleDeviceItemClick(device.deviceId)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
-                          isSelected
-                            ? isSystemAudio || isVirtualMixer
-                              ? "bg-emerald-500/10 border-emerald-500 text-white shadow-md"
-                              : "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
-                            : "bg-[#16161D] border-[#2A2A32] text-gray-300 hover:border-indigo-500/50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 truncate pr-2">
-                          <div
-                            className={`p-2 rounded-lg ${
-                              isSelected
-                                ? isSystemAudio || isVirtualMixer
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-indigo-600 text-white"
-                                : "bg-[#2A2A32] text-[#6B6B76]"
-                            }`}
-                          >
-                            <DeviceIcon className="w-4 h-4" />
-                          </div>
-                          <div className="truncate">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium truncate">{device.label}</p>
-                              {isVirtualMixer && (
-                                <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30 shrink-0">
-                                  Mezclador PC / Apps
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-[#6B6B76] font-mono truncate">
-                              {isSystemAudio
-                                ? "getDisplayMedia • Captura de escritorio"
-                                : isVirtualMixer
-                                ? "Audio Virtual / Mezcla del Sistema (Mezcla todas las Apps)"
-                                : `Entrada Hardware • ${device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}`
-                              }
-                            </p>
-                          </div>
+                  const DeviceIcon = isSystemAudio ? Monitor : Mic;
+                  return (
+                    <button
+                      key={device.deviceId}
+                      onClick={() => onSelectDevice(device.deviceId)}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
+                        isSelected
+                          ? isSystemAudio
+                            ? "bg-emerald-500/10 border-emerald-500 text-white shadow-md"
+                            : "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
+                          : "bg-[#16161D] border-[#2A2A32] text-gray-300 hover:border-indigo-500/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate pr-2">
+                        <div
+                          className={`p-2 rounded-lg ${
+                            isSelected
+                              ? isSystemAudio
+                                ? "bg-emerald-600 text-white"
+                                : "bg-indigo-600 text-white"
+                              : "bg-[#2A2A32] text-[#6B6B76]"
+                          }`}
+                        >
+                          <DeviceIcon className="w-4 h-4" />
                         </div>
+                        <div className="truncate">
+                          <p className="text-sm font-medium truncate">{device.label}</p>
+                          <p className="text-[11px] text-[#6B6B76] font-mono truncate">
+                            {isSystemAudio
+                              ? "getDisplayMedia • Captura de escritorio"
+                              : `USB Audio • ${device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}`
+                            }
+                          </p>
+                        </div>
+                      </div>
                       {isSelected && (
                         <div className={`${isSystemAudio ? "bg-emerald-500" : "bg-indigo-500"} text-white p-1 rounded-full shrink-0`}>
                           <Check className="w-4 h-4" />
@@ -196,42 +171,6 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                 })}
               </div>
             )}
-
-            {/* App Audio Capture Guide Card */}
-            <div className="p-4 bg-[#16161D] border border-indigo-500/30 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-indigo-400">
-                <Monitor className="w-4 h-4" />
-                <span className="text-xs font-bold text-white">¿Cómo capturar el audio de cualquier programa del PC?</span>
-              </div>
-              <p className="text-[11px] text-[#A0A0AB] leading-relaxed">
-                Para subtitular <strong>YouTube, Zoom, Teams, Spotify, VLC, juegos o cualquier aplicación</strong> de tu ordenador:
-              </p>
-              <div className="bg-[#0E0E12] p-3 rounded-lg border border-[#2A2A32] space-y-2 text-[11px] text-gray-300">
-                <div className="flex items-start gap-2">
-                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 1</span>
-                  <span>Selecciona arriba la opción <strong>"🖥️ Audio del Sistema (Escritorio)"</strong>.</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 2</span>
-                  <span>En la ventana emergente del navegador, elige la pestaña o ventana del programa deseado (o toda la pantalla).</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 3</span>
-                  <span>En la ventana emergente, elige la pestaña <strong>"Toda la pantalla"</strong> o <strong>"Pestaña de Chrome"</strong> (donde aparece la casilla de audio abajo a la izquierda).</span>
-                </div>
-              </div>
-              <p className="text-[10px] text-[#6B6B76] italic">
-                * Nota: Si tu versión de Windows o navegador no incluye la casilla de audio en la ventana elegida, la aplicación usará automáticamente tu entrada de audio del sistema (Mezcla Estéreo, NDI o Cable Virtual).
-              </p>
-
-              <button
-                onClick={() => handleDeviceItemClick(SYSTEM_AUDIO_DEVICE_ID)}
-                className="w-full mt-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Monitor className="w-4 h-4" />
-                <span>🖥️ ABRIR SELECCIÓN DE PANTALLA Y AUDIO AHORA</span>
-              </button>
-            </div>
           </div>
 
           {/* Real-time Audio Level VU Meter */}
