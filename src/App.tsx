@@ -268,9 +268,9 @@ const ensurePeriod = (str: string): string => {
 
     if ((!settings.aiAutoRefine && !isTranslationMode) || !rawItem.rawText.trim()) return;
 
-    // Minimal rate limit (200ms) only to prevent duplicate burst events
+    // Rate limit only applies in same-language mode; in translation mode, EVERY phrase must be translated
     const now = Date.now();
-    if (now - lastRefineTimeRef.current < 200) {
+    if (!isTranslationMode && now - lastRefineTimeRef.current < 200) {
       return;
     }
     lastRefineTimeRef.current = now;

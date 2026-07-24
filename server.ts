@@ -123,7 +123,7 @@ REGLAS STRICTAS DE TRADUCCIÓN, PRECISIÓN Y DIÁLOGOS:
           properties: {
             cleanSubtitle: {
               type: Type.STRING,
-              description: "El subtítulo procesado y formateado. Si es un diálogo entre dos personas, debe contener saltos de línea '\\n' y guiones '- ' por cada hablante.",
+              description: `El subtítulo final TRADUCIDO al idioma de destino (${targetLanguage}). Si el idioma de destino (${targetLanguage}) es diferente al de origen (${sourceLanguage}), este campo OBLIGATORIAMENTE debe contener la traducción exacta al ${targetLanguage}. Si es un diálogo entre dos personas, incluye saltos de línea '\\n' y guiones '- '.`,
             },
             speaker: {
               type: Type.STRING,
