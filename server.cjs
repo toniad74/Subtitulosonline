@@ -85,28 +85,28 @@ app.post("/api/refine-subtitles", async (req, res) => {
   };
   try {
     const ai = getGenAI();
-    let systemInstruction = `Eres un ingeniero senior de subtitulaci\xF3n profesional (est\xE1ndar EBU / Netflix broadcast).
-Tu objetivo es tomar transcripciones parciales o crudas y generar subt\xEDtulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+    let systemInstruction = `Eres un corrector ortogr\xE1fico y subtitulador profesional senior (est\xE1ndar RAE / EBU broadcast).
+Tu prioridad absoluta es la PRECISI\xD3N L\xC9XICA Y ORTOGR\xC1FICA. 
 
-REGLAS OBLIGATORIAS DE SUBTITULACI\xD3N DE DI\xC1LOGOS:
-1. Analiza el texto actual y el contexto conversacional previo. Si detectas un DI\xC1LOGO o cambio de interlocutor (dos personas distintas hablando), DEBES separar a cada hablante en una L\xCDNEA DIFERENTE separada por salto de l\xEDnea '\\n', prefijando cada l\xEDnea con gui\xF3n "- ".
-   Ejemplo de di\xE1logo formateado:
-   "- \xBFQu\xE9 hora es?
-   - Son las tres de la tarde."
-2. Si el texto pertenece a UN SOLO hablante, NO uses gui\xF3n inicial "- ". Mantenlo en 1 o 2 l\xEDneas normales sin guiones.
-3. Puntuaci\xF3n perfecta: agrega puntos, comas, signos de interrogaci\xF3n (\xBF?) y exclamaci\xF3n (\xA1!) seg\xFAn el tono de la conversaci\xF3n.
-4. M\xE1ximo 42 caracteres por l\xEDnea (est\xE1ndar broadcast).
-5. Mant\xE9n la fidelidad de las palabras expresadas sin alterar el significado.
+REGLAS STRICTAS DE PRECISI\xD3N Y DI\xC1LOGOS:
+1. ORTOGRAF\xCDA PERFECTA (RAE): Aplica con rigor las reglas de ortograf\xEDa del espa\xF1ol (tildes, tildes diacr\xEDticas, acentuaci\xF3n correcta, b/v, c/s/z, h, g/j, signos de puntuaci\xF3n e interrogaci\xF3n/exclamaci\xF3n \xBF? \xA1!).
+2. CERO PALABRAS INVENTADAS: NUNCA inventes palabras, no supongas palabras no pronunciadas y no uses t\xE9rminos inexistentes en el diccionario. Si una palabra no est\xE1 clara, mant\xE9n la m\xE1s cercana fon\xE9ticamente real en espa\xF1ol.
+3. DI\xC1LOGOS: Si detectas que est\xE1n hablando dos o m\xE1s interlocutores (di\xE1logo), DEBES colocar a cada parlante en una L\xCDNEA SEPARADA con salto de l\xEDnea '\\n', prefijando cada l\xEDnea con gui\xF3n "- ".
+   Ejemplo de di\xE1logo:
+   "- \xBFVas a venir ma\xF1ana?
+   - S\xED, a primera hora."
+4. Si habla una sola persona, NO uses guiones de di\xE1logo.
+5. Fidelidad total al significado y al vocabulario pronunciado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subt\xEDtulos deseado: ${targetLanguage}`;
     if (glossary) {
       systemInstruction += `
-- Glosario / T\xE9rminos t\xE9cnicos prioritarios: ${glossary}`;
+- Glosario de t\xE9rminos t\xE9cnicos autorizados: ${glossary}`;
     }
     if (promptMode === "speakers") {
       systemInstruction += `
-- PRIORIDAD: Si identificas a los hablantes, usa etiquetas (ej: "- Juan: \xBFC\xF3mo est\xE1s?\\n- Mar\xEDa: Bien, gracias."). Si no sabes el nombre, usa "- Hablante 1:\\n- Hablante 2:".`;
+- PRIORIDAD HABLANTES: Si identificas los nombres, \xFAsalos (ej: "- Juan: \xBFC\xF3mo est\xE1s?\\n- Mar\xEDa: Bien, gracias."). Si no los sabes, usa "- Hablante 1:\\n- Hablante 2:".`;
     }
     const userPrompt = `${conversationContext ? `[CONTEXTO PREVIO]:
 ${conversationContext}
@@ -118,7 +118,7 @@ ${conversationContext}
       contents: userPrompt,
       config: {
         systemInstruction,
-        temperature: 0.1,
+        temperature: 0,
         maxOutputTokens: 200,
         responseMimeType: "application/json",
         responseSchema: {
@@ -191,6 +191,7 @@ ${promptContext ? `Contexto adicional: ${promptContext}` : ""}`;
         parts: [audioPart, { text: promptText }]
       },
       config: {
+        temperature: 0,
         responseMimeType: "application/json",
         responseSchema: {
           type: import_genai.Type.OBJECT,
