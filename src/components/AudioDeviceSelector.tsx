@@ -171,6 +171,31 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                 })}
               </div>
             )}
+
+            {/* App Audio Capture Guide Card */}
+            <div className="p-4 bg-[#16161D] border border-indigo-500/30 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-indigo-400">
+                <Monitor className="w-4 h-4" />
+                <span className="text-xs font-bold text-white">¿Cómo capturar el audio de cualquier programa del PC?</span>
+              </div>
+              <p className="text-[11px] text-[#A0A0AB] leading-relaxed">
+                Para subtitular <strong>YouTube, Zoom, Teams, Spotify, VLC, juegos o cualquier aplicación</strong> de tu ordenador:
+              </p>
+              <div className="bg-[#0E0E12] p-3 rounded-lg border border-[#2A2A32] space-y-2 text-[11px] text-gray-300">
+                <div className="flex items-start gap-2">
+                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 1</span>
+                  <span>Selecciona arriba la opción <strong>"🖥️ Audio del Sistema (Escritorio)"</strong>.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 2</span>
+                  <span>En la ventana emergente del navegador, elige la pestaña o ventana del programa deseado (o toda la pantalla).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Paso 3</span>
+                  <span><strong>¡IMPORTANTE!</strong> Asegúrate de dejar activada la casilla <strong>"Compartir audio del sistema"</strong> (abajo a la izquierda).</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Real-time Audio Level VU Meter */}

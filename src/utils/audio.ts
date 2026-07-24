@@ -86,30 +86,37 @@ export async function getAudioStream(
  * Returns a MediaStream with ONLY audio tracks (video tracks are stopped immediately).
  */
 export async function getSystemAudioStream(): Promise<MediaStream> {
-  const displayStream = await navigator.mediaDevices.getDisplayMedia({
-    video: true, // Required by spec, but we'll discard it
-    audio: {
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false,
-      sampleRate: { ideal: 48000 },
-    } as any,
-  });
+  try {
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true, // Required by spec, stopped immediately below
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        suppressLocalAudioPlayback: false,
+        sampleRate: { ideal: 48000 },
+      } as any,
+      systemAudio: "include", // Request system-wide audio capture in Chrome/Edge
+    } as any);
 
-  // Stop video tracks immediately — we only want audio
-  displayStream.getVideoTracks().forEach((track) => track.stop());
+    // Stop video tracks immediately — we only want audio from the computer apps
+    displayStream.getVideoTracks().forEach((track) => track.stop());
 
-  const audioTracks = displayStream.getAudioTracks();
-  if (audioTracks.length === 0) {
-    // User may have shared screen without audio checked
-    displayStream.getTracks().forEach((t) => t.stop());
-    throw new Error(
-      "No se capturó audio del sistema. Asegúrate de marcar 'Compartir audio' en el diálogo del navegador."
-    );
+    const audioTracks = displayStream.getAudioTracks();
+    if (audioTracks.length === 0) {
+      displayStream.getTracks().forEach((t) => t.stop());
+      throw new Error(
+        "No se capturó audio del sistema. Al seleccionar la pantalla en la ventana del navegador, debes marcar la casilla 'Compartir audio del sistema' (abajo a la izquierda)."
+      );
+    }
+
+    return new MediaStream(audioTracks);
+  } catch (err: any) {
+    if (err.name === "NotAllowedError") {
+      throw new Error("Permiso de captura cancelado. Para capturar el audio de tus programas, permite el acceso cuando el navegador lo solicite.");
+    }
+    throw err;
   }
-
-  // Return a clean stream with only audio
-  return new MediaStream(audioTracks);
 }
 
 /**
