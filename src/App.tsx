@@ -355,12 +355,99 @@ const ensurePeriod = (str: string): string => {
     }
   };
 
+  const systemAudioRecorderRef = useRef<MediaRecorder | null>(null);
+
+  // Helper to continuously record audio chunks and send to Gemini 3.6 Flash multimodal API
+  const startSystemAudioChunks = (stream: MediaStream) => {
+    try {
+      if (systemAudioRecorderRef.current && systemAudioRecorderRef.current.state !== "inactive") {
+        systemAudioRecorderRef.current.stop();
+      }
+
+      let mediaOptions: MediaRecorderOptions | undefined = undefined;
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          mediaOptions = { mimeType: "audio/webm;codecs=opus" };
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          mediaOptions = { mimeType: "audio/webm" };
+        }
+      }
+
+      const recorder = new MediaRecorder(stream, mediaOptions);
+      systemAudioRecorderRef.current = recorder;
+
+      recorder.ondataavailable = async (e) => {
+        if (e.data && e.data.size > 500) {
+          try {
+            const base64 = await blobToBase64(e.data);
+            const res = await fetch("/api/transcribe-audio", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                audioBase64: base64,
+                mimeType: recorder.mimeType || "audio/webm",
+                sourceLanguage: settings.sourceLanguage,
+                targetLanguage: settings.targetLanguage,
+                promptContext: settings.glossary,
+              }),
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data.transcript && data.transcript.trim()) {
+                const text = data.transcript.trim();
+
+                setSubtitles((prev) => {
+                  const lastSub = prev[prev.length - 1];
+                  const cleanedRaw = deduplicateSubtitleText(text, lastSub?.rawText || lastSub?.text);
+                  if (!cleanedRaw || cleanedRaw.length < 2) return prev;
+
+                  const formattedText = ensurePeriod(cleanedRaw);
+                  const now = new Date();
+                  const timeString = now.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  });
+
+                  const newItem: SubtitleItem = {
+                    id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                    timestamp: timeString,
+                    rawText: cleanedRaw,
+                    text: formattedText,
+                    confidence: 0.95,
+                    isFinal: true,
+                    isAIRefined: true,
+                    createdAt: Date.now(),
+                  };
+
+                  setCurrentSubtitle(newItem);
+                  resetSilenceTimers();
+                  return [...prev, newItem];
+                });
+              }
+            }
+          } catch (err) {
+            console.warn("Gemini multimodal chunk transcription error:", err);
+          }
+        }
+      };
+
+      recorder.start(2500); // 2.5s audio chunk interval
+    } catch (err) {
+      console.warn("Could not start MediaRecorder audio stream:", err);
+    }
+  };
+
   // Toggle Listening State
   const handleToggleListening = async () => {
     if (isListening) {
       // Stop listening
       if (speechServiceRef.current) {
         speechServiceRef.current.stop();
+      }
+      if (systemAudioRecorderRef.current && systemAudioRecorderRef.current.state !== "inactive") {
+        systemAudioRecorderRef.current.stop();
       }
       setIsListening(false);
       setInterimText("");
@@ -383,6 +470,9 @@ const ensurePeriod = (str: string): string => {
         alert("No se pudo acceder al dispositivo de entrada de audio seleccionado. Revisa los permisos.");
         return;
       }
+
+      // Start multimodal audio recorder for system / vMix audio streams
+      startSystemAudioChunks(stream);
 
       if (speechServiceRef.current) {
         speechServiceRef.current.start(
