@@ -74,7 +74,7 @@ app.get("/api/live-state", (_req, res) => {
   return res.json(liveSubtitleState);
 });
 app.post("/api/refine-subtitles", async (req, res) => {
-  const { rawText, sourceLanguage = "es", targetLanguage = "es", glossary = "", promptMode = "standard" } = req.body;
+  const { rawText, conversationContext = "", sourceLanguage = "es", targetLanguage = "es", glossary = "", promptMode = "standard" } = req.body;
   if (!rawText || typeof rawText !== "string") {
     return res.status(400).json({ error: "rawText string is required" });
   }
@@ -88,15 +88,15 @@ app.post("/api/refine-subtitles", async (req, res) => {
     let systemInstruction = `Eres un ingeniero senior de subtitulaci\xF3n profesional (est\xE1ndar EBU / Netflix broadcast).
 Tu objetivo es tomar transcripciones parciales o crudas y generar subt\xEDtulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
 
-REGLAS OBLIGATORIAS DE SUBTITULACI\xD3N:
-1. Cuando detectes un DI\xC1LOGO (dos o m\xE1s interlocutores), DEBES separar cada parlante en una l\xEDnea diferente, prefijada con gui\xF3n "- ".
-   Ejemplo correcto:
+REGLAS OBLIGATORIAS DE SUBTITULACI\xD3N DE DI\xC1LOGOS:
+1. Analiza el texto actual y el contexto conversacional previo. Si detectas un DI\xC1LOGO o cambio de interlocutor (dos personas distintas hablando), DEBES separar a cada hablante en una L\xCDNEA DIFERENTE separada por salto de l\xEDnea '\\n', prefijando cada l\xEDnea con gui\xF3n "- ".
+   Ejemplo de di\xE1logo formateado:
    "- \xBFQu\xE9 hora es?
    - Son las tres de la tarde."
-2. Si solo hay UN hablante, NO uses guiones de di\xE1logo.
-3. Puntuaci\xF3n perfecta: puntos, comas, signos de interrogaci\xF3n y exclamaci\xF3n donde correspondan.
+2. Si el texto pertenece a UN SOLO hablante, NO uses gui\xF3n inicial "- ". Mantenlo en 1 o 2 l\xEDneas normales sin guiones.
+3. Puntuaci\xF3n perfecta: agrega puntos, comas, signos de interrogaci\xF3n (\xBF?) y exclamaci\xF3n (\xA1!) seg\xFAn el tono de la conversaci\xF3n.
 4. M\xE1ximo 42 caracteres por l\xEDnea (est\xE1ndar broadcast).
-5. Mant\xE9n la naturalidad del habla sin a\xF1adir ni inventar contenido.
+5. Mant\xE9n la fidelidad de las palabras expresadas sin alterar el significado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subt\xEDtulos deseado: ${targetLanguage}`;
@@ -106,27 +106,31 @@ REGLAS OBLIGATORIAS DE SUBTITULACI\xD3N:
     }
     if (promptMode === "speakers") {
       systemInstruction += `
-- PRIORIDAD: Identifica y etiqueta a los hablantes con nombre si es posible (ej: "- Juan: \xBFC\xF3mo est\xE1s?\\n- Mar\xEDa: Bien, gracias."). Si no puedes identificarlos, usa "- Hablante 1:", "- Hablante 2:".`;
+- PRIORIDAD: Si identificas a los hablantes, usa etiquetas (ej: "- Juan: \xBFC\xF3mo est\xE1s?\\n- Mar\xEDa: Bien, gracias."). Si no sabes el nombre, usa "- Hablante 1:\\n- Hablante 2:".`;
     }
+    const userPrompt = `${conversationContext ? `[CONTEXTO PREVIO]:
+${conversationContext}
+
+` : ""}[TEXTO A SUBTITULAR]:
+"${rawText}"`;
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
-      contents: `Procesa el siguiente texto transcribible y genera los subt\xEDtulos optimizados:
-"${rawText}"`,
+      contents: userPrompt,
       config: {
         systemInstruction,
         temperature: 0.1,
-        maxOutputTokens: 150,
+        maxOutputTokens: 200,
         responseMimeType: "application/json",
         responseSchema: {
           type: import_genai.Type.OBJECT,
           properties: {
             cleanSubtitle: {
               type: import_genai.Type.STRING,
-              description: "El subt\xEDtulo procesado, limpio, traducido (si aplica) y puntuado."
+              description: "El subt\xEDtulo procesado y formateado. Si es un di\xE1logo entre dos personas, debe contener saltos de l\xEDnea '\\n' y guiones '- ' por cada hablante."
             },
             speaker: {
               type: import_genai.Type.STRING,
-              description: "Nombre o etiqueta del hablante si se detecta (ej: 'Hablante 1', 'Persona A'), o string vac\xEDo si no."
+              description: "Nombre o etiqueta del hablante si se detecta un \xFAnico hablante principal, o string vac\xEDo si es un di\xE1logo multitexto."
             },
             detectedLanguage: {
               type: import_genai.Type.STRING,
