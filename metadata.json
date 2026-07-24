@@ -1,0 +1,6 @@
+{
+  "name": "Subtítulos en Tiempo Real IA",
+  "description": "Aplicación de subtitulado de conversaciones en tiempo real con inteligencia artificial y selección de dispositivo de entrada de audio.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
