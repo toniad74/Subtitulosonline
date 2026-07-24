@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Mic, Monitor, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square } from "lucide-react";
+import { Mic, Monitor, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square, ExternalLink } from "lucide-react";
 import { AudioDeviceOption, SubtitleSettings } from "../types";
-import { SYSTEM_AUDIO_DEVICE_ID } from "../utils/audio";
+import { SYSTEM_AUDIO_DEVICE_ID, getSystemAudioStream } from "../utils/audio";
 
 interface AudioDeviceSelectorProps {
   isOpen: boolean;
@@ -33,6 +33,21 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   if (!isOpen) return null;
+
+  const handleDeviceItemClick = async (deviceId: string) => {
+    if (deviceId === SYSTEM_AUDIO_DEVICE_ID) {
+      try {
+        // Trigger getSystemAudioStream directly inside user click handler to guarantee browser popup window
+        await getSystemAudioStream();
+        onSelectDevice(deviceId);
+        onClose();
+      } catch (err: any) {
+        alert(err.message || "No se seleccionó ninguna fuente de audio del sistema.");
+      }
+    } else {
+      onSelectDevice(deviceId);
+    }
+  };
 
   const handleStartTest = () => {
     if (!activeStream) return;
@@ -130,7 +145,7 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                   return (
                     <button
                       key={device.deviceId}
-                      onClick={() => onSelectDevice(device.deviceId)}
+                      onClick={() => handleDeviceItemClick(device.deviceId)}
                       className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
                         isSelected
                           ? isSystemAudio
@@ -195,6 +210,14 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
                   <span><strong>¡IMPORTANTE!</strong> Asegúrate de dejar activada la casilla <strong>"Compartir audio del sistema"</strong> (abajo a la izquierda).</span>
                 </div>
               </div>
+
+              <button
+                onClick={() => handleDeviceItemClick(SYSTEM_AUDIO_DEVICE_ID)}
+                className="w-full mt-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Monitor className="w-4 h-4" />
+                <span>🖥️ ABRIR SELECCIÓN DE PANTALLA Y AUDIO AHORA</span>
+              </button>
             </div>
           </div>
 

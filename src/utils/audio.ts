@@ -87,35 +87,30 @@ export async function getAudioStream(
  */
 export async function getSystemAudioStream(): Promise<MediaStream> {
   try {
+    // Standard getDisplayMedia invocation for max cross-browser compatibility
     const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true, // Required by spec, stopped immediately below
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        suppressLocalAudioPlayback: false,
-        sampleRate: { ideal: 48000 },
-      } as any,
-      systemAudio: "include", // Request system-wide audio capture in Chrome/Edge
-    } as any);
+      video: true, // Required by Web standard, discarded immediately
+      audio: true, // Captures system / tab / app audio output
+    });
 
-    // Stop video tracks immediately — we only want audio from the computer apps
+    // Stop video tracks immediately — we only want audio from computer apps
     displayStream.getVideoTracks().forEach((track) => track.stop());
 
     const audioTracks = displayStream.getAudioTracks();
     if (audioTracks.length === 0) {
       displayStream.getTracks().forEach((t) => t.stop());
       throw new Error(
-        "No se capturó audio del sistema. Al seleccionar la pantalla en la ventana del navegador, debes marcar la casilla 'Compartir audio del sistema' (abajo a la izquierda)."
+        "No se capturó audio del sistema. Al seleccionar la pantalla en la ventana del navegador, debes activar la casilla 'Compartir audio del sistema' (abajo a la izquierda)."
       );
     }
 
     return new MediaStream(audioTracks);
   } catch (err: any) {
+    console.error("getDisplayMedia error:", err);
     if (err.name === "NotAllowedError") {
-      throw new Error("Permiso de captura cancelado. Para capturar el audio de tus programas, permite el acceso cuando el navegador lo solicite.");
+      throw new Error("Selección cancelada o denegada por el usuario.");
     }
-    throw err;
+    throw new Error(`Error al capturar audio del sistema: ${err.message || err}`);
   }
 }
 
