@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Mic, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square } from "lucide-react";
+import { Mic, Monitor, Volume2, Sliders, Check, RefreshCw, AlertCircle, X, ShieldCheck, Play, Square } from "lucide-react";
 import { AudioDeviceOption, SubtitleSettings } from "../types";
+import { SYSTEM_AUDIO_DEVICE_ID } from "../utils/audio";
 
 interface AudioDeviceSelectorProps {
   isOpen: boolean;
@@ -78,9 +79,9 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-lg text-white">Configuración de Entrada de Audio</h2>
+              <h2 className="font-bold text-lg text-white">Configuración de Audio</h2>
               <p className="text-xs text-[#6B6B76]">
-                Selecciona tu micrófono o fuente de audio conversacional
+                Selecciona micrófono, cable virtual o audio del sistema
               </p>
             </div>
           </div>
@@ -124,33 +125,44 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({
               <div className="space-y-2">
                 {devices.map((device) => {
                   const isSelected = selectedDeviceId === device.deviceId;
+                  const isSystemAudio = device.deviceId === SYSTEM_AUDIO_DEVICE_ID;
+                  const DeviceIcon = isSystemAudio ? Monitor : Mic;
                   return (
                     <button
                       key={device.deviceId}
                       onClick={() => onSelectDevice(device.deviceId)}
                       className={`w-full flex items-center justify-between p-3 rounded-xl text-left border transition ${
                         isSelected
-                          ? "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
+                          ? isSystemAudio
+                            ? "bg-emerald-500/10 border-emerald-500 text-white shadow-md"
+                            : "bg-indigo-500/10 border-indigo-500 text-white shadow-md"
                           : "bg-[#16161D] border-[#2A2A32] text-gray-300 hover:border-indigo-500/50"
                       }`}
                     >
                       <div className="flex items-center gap-3 truncate pr-2">
                         <div
                           className={`p-2 rounded-lg ${
-                            isSelected ? "bg-indigo-600 text-white" : "bg-[#2A2A32] text-[#6B6B76]"
+                            isSelected
+                              ? isSystemAudio
+                                ? "bg-emerald-600 text-white"
+                                : "bg-indigo-600 text-white"
+                              : "bg-[#2A2A32] text-[#6B6B76]"
                           }`}
                         >
-                          <Mic className="w-4 h-4" />
+                          <DeviceIcon className="w-4 h-4" />
                         </div>
                         <div className="truncate">
                           <p className="text-sm font-medium truncate">{device.label}</p>
                           <p className="text-[11px] text-[#6B6B76] font-mono truncate">
-                            USB Audio • {device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}
+                            {isSystemAudio
+                              ? "getDisplayMedia • Captura de escritorio"
+                              : `USB Audio • ${device.deviceId ? device.deviceId.slice(0, 16) + "..." : "Predeterminado"}`
+                            }
                           </p>
                         </div>
                       </div>
                       {isSelected && (
-                        <div className="bg-indigo-500 text-white p-1 rounded-full shrink-0">
+                        <div className={`${isSystemAudio ? "bg-emerald-500" : "bg-indigo-500"} text-white p-1 rounded-full shrink-0`}>
                           <Check className="w-4 h-4" />
                         </div>
                       )}

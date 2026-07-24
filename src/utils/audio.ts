@@ -1,7 +1,11 @@
 import { AudioDeviceOption } from "../types";
 
+/** Special device ID for system audio capture */
+export const SYSTEM_AUDIO_DEVICE_ID = "__system_audio__";
+
 /**
  * Get available audio input devices (microphones, lines in, virtual cables)
+ * Includes a special "System Audio" option for desktop audio capture
  */
 export async function getAudioInputDevices(): Promise<AudioDeviceOption[]> {
   try {
@@ -17,12 +21,25 @@ export async function getAudioInputDevices(): Promise<AudioDeviceOption[]> {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioInputs = devices.filter((d) => d.kind === "audioinput");
 
-    return audioInputs.map((device, index) => ({
+    const deviceOptions: AudioDeviceOption[] = audioInputs.map((device, index) => ({
       deviceId: device.deviceId,
       label: device.label || `Entrada de audio ${index + 1}`,
       groupId: device.groupId,
       isDefault: device.deviceId === "default" || index === 0,
     }));
+
+    // Add system audio option (getDisplayMedia with audio)
+    // Only available in Chromium-based browsers
+    if (typeof navigator.mediaDevices.getDisplayMedia === "function") {
+      deviceOptions.push({
+        deviceId: SYSTEM_AUDIO_DEVICE_ID,
+        label: "🖥️ Audio del Sistema (Escritorio)",
+        groupId: "system",
+        isDefault: false,
+      });
+    }
+
+    return deviceOptions;
   } catch (err) {
     console.error("Error enumerating audio devices:", err);
     return [];
@@ -40,6 +57,11 @@ export async function getAudioStream(
     autoGainControl?: boolean;
   } = {}
 ): Promise<MediaStream> {
+  // System audio capture via getDisplayMedia
+  if (deviceId === SYSTEM_AUDIO_DEVICE_ID) {
+    return await getSystemAudioStream();
+  }
+
   const audioConstraints: MediaTrackConstraints = {
     noiseSuppression: constraints.noiseSuppression ?? true,
     echoCancellation: constraints.echoCancellation ?? true,
@@ -56,6 +78,38 @@ export async function getAudioStream(
   return await navigator.mediaDevices.getUserMedia({
     audio: audioConstraints,
   });
+}
+
+/**
+ * Capture system/desktop audio using getDisplayMedia.
+ * The user will see a browser prompt to select a tab/window/screen to share audio from.
+ * Returns a MediaStream with ONLY audio tracks (video tracks are stopped immediately).
+ */
+export async function getSystemAudioStream(): Promise<MediaStream> {
+  const displayStream = await navigator.mediaDevices.getDisplayMedia({
+    video: true, // Required by spec, but we'll discard it
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      sampleRate: { ideal: 48000 },
+    } as any,
+  });
+
+  // Stop video tracks immediately — we only want audio
+  displayStream.getVideoTracks().forEach((track) => track.stop());
+
+  const audioTracks = displayStream.getAudioTracks();
+  if (audioTracks.length === 0) {
+    // User may have shared screen without audio checked
+    displayStream.getTracks().forEach((t) => t.stop());
+    throw new Error(
+      "No se capturó audio del sistema. Asegúrate de marcar 'Compartir audio' en el diálogo del navegador."
+    );
+  }
+
+  // Return a clean stream with only audio
+  return new MediaStream(audioTracks);
 }
 
 /**

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Sparkles, User, Maximize2, Minimize2, Copy, Check, Palette, Type, SquareDot } from "lucide-react";
 import { SubtitleItem, SubtitleSettings, SubtitleDisplayStyle } from "../types";
+import { formatProfessionalSubtitles } from "../utils/subtitleFormatter";
 
 interface LiveSubtitleCardProps {
   currentSubtitle: SubtitleItem | null;
@@ -41,28 +42,7 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
   const activeSpeaker = interimText ? undefined : currentSubtitle?.speaker;
   const isInterim = !!interimText;
 
-  // Format active text into lines bounded by maxWordsPerLine and maxLines
-  const formatSubtitleLines = (
-    text: string,
-    maxWordsPerLine: number = 10,
-    maxLines: number = 2
-  ): string[] => {
-    if (!text) return [];
-    const words = text.trim().split(/\s+/);
-    if (words.length === 0 || words[0] === "") return [];
-
-    const lines: string[] = [];
-    for (let i = 0; i < words.length; i += maxWordsPerLine) {
-      lines.push(words.slice(i, i + maxWordsPerLine).join(" "));
-    }
-
-    if (lines.length > maxLines) {
-      return lines.slice(lines.length - maxLines);
-    }
-    return lines;
-  };
-
-  const formattedLines = formatSubtitleLines(
+  const formattedLines = formatProfessionalSubtitles(
     activeText,
     settings.maxWordsPerLine || 10,
     settings.maxLines || 2

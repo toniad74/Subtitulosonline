@@ -78,8 +78,19 @@ app.post("/api/refine-subtitles", async (req, res) => {
   try {
     const ai = getGenAI();
 
-    let systemInstruction = `Eres un sistema experto en subtitulado e inteligencia conversacional en tiempo real.
-Tu objetivo es tomar transcripciones parciales o crudas de una conversación y generar subtítulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+    let systemInstruction = `Eres un ingeniero senior de subtitulación profesional (estándar EBU / Netflix broadcast).
+Tu objetivo es tomar transcripciones parciales o crudas y generar subtítulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
+
+REGLAS OBLIGATORIAS DE SUBTITULACIÓN:
+1. Cuando detectes un DIÁLOGO (dos o más interlocutores), DEBES separar cada parlante en una línea diferente, prefijada con guión "- ".
+   Ejemplo correcto:
+   "- ¿Qué hora es?
+   - Son las tres de la tarde."
+2. Si solo hay UN hablante, NO uses guiones de diálogo.
+3. Puntuación perfecta: puntos, comas, signos de interrogación y exclamación donde correspondan.
+4. Máximo 42 caracteres por línea (estándar broadcast).
+5. Mantén la naturalidad del habla sin añadir ni inventar contenido.
+
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subtítulos deseado: ${targetLanguage}`;
 
@@ -88,7 +99,7 @@ Tu objetivo es tomar transcripciones parciales o crudas de una conversación y g
     }
 
     if (promptMode === "speakers") {
-      systemInstruction += `\n- Identifica y etiqueta a los hablantes si detectas cambio de interlocutor o contexto (ej: "Hablante 1:", "Hablante 2:").`;
+      systemInstruction += `\n- PRIORIDAD: Identifica y etiqueta a los hablantes con nombre si es posible (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no puedes identificarlos, usa "- Hablante 1:", "- Hablante 2:".`;
     }
 
     const response = await ai.models.generateContent({

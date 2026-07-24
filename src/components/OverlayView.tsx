@@ -5,6 +5,7 @@ import { SpeechRecognitionService } from "../utils/speech";
 
 import { ClientPeerManager, getSavedRoomId, OverlayStatePayload } from "../utils/peerSync";
 import { MqttSubscriber, getSavedTopic } from "../utils/mqttSync";
+import { formatProfessionalSubtitles } from "../utils/subtitleFormatter";
 
 const hexToRgba = (hex: string, opacity: number = 90) => {
   if (!hex) return `rgba(10, 10, 12, ${opacity / 100})`;
@@ -293,30 +294,7 @@ export const OverlayView: React.FC<{
   const activeText = interimText || currentSubtitle?.text || "";
   const isInterim = !!interimText;
 
-  // Format into lines bounded by maxWordsPerLine
-  const formatSubtitleLines = (text: string, maxWords: number = 10, maxLines: number = 2) => {
-    if (!text) return [];
-    const words = text.trim().split(/\s+/);
-    if (words.length === 0 || words[0] === "") return [];
-
-    const lines: string[] = [];
-    let currentLine: string[] = [];
-
-    for (const word of words) {
-      currentLine.push(word);
-      if (currentLine.length >= maxWords) {
-        lines.push(currentLine.join(" "));
-        currentLine = [];
-      }
-    }
-    if (currentLine.length > 0) {
-      lines.push(currentLine.join(" "));
-    }
-
-    return lines.slice(-maxLines);
-  };
-
-  const formattedLines = formatSubtitleLines(
+  const formattedLines = formatProfessionalSubtitles(
     activeText,
     settings.maxWordsPerLine || 10,
     settings.maxLines || 2
