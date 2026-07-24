@@ -260,11 +260,19 @@ const ensurePeriod = (str: string): string => {
 
     setIsAIRefining(true);
     try {
+      // Build conversation context from recent subtitles so AI can detect speaker changes
+      const recentContext = subtitles
+        .slice(-5)
+        .map((s) => s.rawText || s.text)
+        .filter(Boolean)
+        .join("\n");
+
       const res = await fetch("/api/refine-subtitles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rawText: rawItem.rawText,
+          conversationContext: recentContext,
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
           glossary: settings.glossary,

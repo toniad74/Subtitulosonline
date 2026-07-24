@@ -62,7 +62,7 @@ app.get("/api/live-state", (_req, res) => {
 
 // Refine & Format raw subtitles real-time endpoint
 app.post("/api/refine-subtitles", async (req, res) => {
-  const { rawText, sourceLanguage = "es", targetLanguage = "es", glossary = "", promptMode = "standard" } = req.body;
+  const { rawText, conversationContext = "", sourceLanguage = "es", targetLanguage = "es", glossary = "", promptMode = "standard" } = req.body;
 
   if (!rawText || typeof rawText !== "string") {
     return res.status(400).json({ error: "rawText string is required" });
@@ -81,15 +81,15 @@ app.post("/api/refine-subtitles", async (req, res) => {
     let systemInstruction = `Eres un ingeniero senior de subtitulación profesional (estándar EBU / Netflix broadcast).
 Tu objetivo es tomar transcripciones parciales o crudas y generar subtítulos limpios, legibles, puntuados correctamente y divididos en fragmentos naturales para pantalla.
 
-REGLAS OBLIGATORIAS DE SUBTITULACIÓN:
-1. Cuando detectes un DIÁLOGO (dos o más interlocutores), DEBES separar cada parlante en una línea diferente, prefijada con guión "- ".
-   Ejemplo correcto:
+REGLAS OBLIGATORIAS DE SUBTITULACIÓN DE DIÁLOGOS:
+1. Analiza el texto actual y el contexto conversacional previo. Si detectas un DIÁLOGO o cambio de interlocutor (dos personas distintas hablando), DEBES separar a cada hablante en una LÍNEA DIFERENTE separada por salto de línea '\\n', prefijando cada línea con guión "- ".
+   Ejemplo de diálogo formateado:
    "- ¿Qué hora es?
    - Son las tres de la tarde."
-2. Si solo hay UN hablante, NO uses guiones de diálogo.
-3. Puntuación perfecta: puntos, comas, signos de interrogación y exclamación donde correspondan.
+2. Si el texto pertenece a UN SOLO hablante, NO uses guión inicial "- ". Mantenlo en 1 o 2 líneas normales sin guiones.
+3. Puntuación perfecta: agrega puntos, comas, signos de interrogación (¿?) y exclamación (¡!) según el tono de la conversación.
 4. Máximo 42 caracteres por línea (estándar broadcast).
-5. Mantén la naturalidad del habla sin añadir ni inventar contenido.
+5. Mantén la fidelidad de las palabras expresadas sin alterar el significado.
 
 - Idioma de origen: ${sourceLanguage}
 - Idioma de subtítulos deseado: ${targetLanguage}`;
@@ -99,28 +99,29 @@ REGLAS OBLIGATORIAS DE SUBTITULACIÓN:
     }
 
     if (promptMode === "speakers") {
-      systemInstruction += `\n- PRIORIDAD: Identifica y etiqueta a los hablantes con nombre si es posible (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no puedes identificarlos, usa "- Hablante 1:", "- Hablante 2:".`;
+      systemInstruction += `\n- PRIORIDAD: Si identificas a los hablantes, usa etiquetas (ej: "- Juan: ¿Cómo estás?\\n- María: Bien, gracias."). Si no sabes el nombre, usa "- Hablante 1:\\n- Hablante 2:".`;
     }
+
+    const userPrompt = `${conversationContext ? `[CONTEXTO PREVIO]:\n${conversationContext}\n\n` : ""}[TEXTO A SUBTITULAR]:\n"${rawText}"`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
-      contents: `Procesa el siguiente texto transcribible y genera los subtítulos optimizados:
-"${rawText}"`,
+      contents: userPrompt,
       config: {
         systemInstruction,
         temperature: 0.1,
-        maxOutputTokens: 150,
+        maxOutputTokens: 200,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             cleanSubtitle: {
               type: Type.STRING,
-              description: "El subtítulo procesado, limpio, traducido (si aplica) y puntuado.",
+              description: "El subtítulo procesado y formateado. Si es un diálogo entre dos personas, debe contener saltos de línea '\\n' y guiones '- ' por cada hablante.",
             },
             speaker: {
               type: Type.STRING,
-              description: "Nombre o etiqueta del hablante si se detecta (ej: 'Hablante 1', 'Persona A'), o string vacío si no.",
+              description: "Nombre o etiqueta del hablante si se detecta un único hablante principal, o string vacío si es un diálogo multitexto.",
             },
             detectedLanguage: {
               type: Type.STRING,
