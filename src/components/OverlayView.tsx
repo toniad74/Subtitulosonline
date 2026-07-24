@@ -513,9 +513,6 @@ export const OverlayView: React.FC<{
                     <span className="font-bold text-indigo-400 mr-2">[{currentSubtitle.speaker}]:</span>
                   )}
                   {lineText}
-                  {idx === formattedLines.length - 1 && isInterim && (
-                    <span className="inline-block w-2 h-5 bg-indigo-400 ml-1.5 animate-pulse rounded-full align-middle" />
-                  )}
                 </p>
               ))}
             </div>
