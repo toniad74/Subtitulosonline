@@ -10,7 +10,6 @@ interface HeaderProps {
   selectedDeviceLabel: string;
   onOpenAudioSettings: () => void;
   onOpenAISettings: () => void;
-  onOpenSummary: () => void;
   onExport: () => void;
   subtitleCount: number;
   audioLevel: number;
@@ -23,7 +22,6 @@ export const Header: React.FC<HeaderProps> = ({
   selectedDeviceLabel,
   onOpenAudioSettings,
   onOpenAISettings,
-  onOpenSummary,
   onExport,
   subtitleCount,
   audioLevel,
@@ -188,16 +186,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>,
               document.body
             )}
-
-          {/* Summary button */}
-          <button
-            onClick={onOpenSummary}
-            disabled={subtitleCount === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg transition text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <FileText className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden sm:inline">Resumen IA</span>
-          </button>
 
           {/* Export */}
           <button

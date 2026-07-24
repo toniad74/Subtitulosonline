@@ -502,7 +502,6 @@ const ensurePeriod = (str: string): string => {
         selectedDeviceLabel={selectedDeviceLabel}
         onOpenAudioSettings={() => setIsAudioModalOpen(true)}
         onOpenAISettings={() => setIsAIModalOpen(true)}
-        onOpenSummary={() => setIsSummaryModalOpen(true)}
         onExport={handleExport}
         subtitleCount={subtitles.length}
         audioLevel={audioLevel}
