@@ -116,6 +116,14 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
     };
   };
 
+  const borderRadiusClasses: Record<string, string> = {
+    none: "rounded-none",
+    sm: "rounded-lg",
+    md: "rounded-xl",
+    lg: "rounded-2xl",
+    full: "rounded-[2.5rem]",
+  };
+
   // Dynamic Background Style
   const cardBgStyle: React.CSSProperties = {
     backgroundColor: hexToRgba(settings.bgColor || "#0a0a0c", settings.bgOpacity ?? 90),
@@ -124,7 +132,7 @@ export const LiveSubtitleCard: React.FC<LiveSubtitleCardProps> = ({
   return (
     <div
       style={cardBgStyle}
-      className={`relative w-full transition-all duration-300 rounded-2xl border border-white/10 p-6 flex flex-col justify-between min-h-[180px] sm:min-h-[220px] shadow-2xl backdrop-blur-md ${
+      className={`relative w-full transition-all duration-300 ${borderRadiusClasses[settings.borderRadius || "lg"]} border border-white/10 p-6 flex flex-col justify-between min-h-[180px] sm:min-h-[220px] shadow-2xl backdrop-blur-md ${
         isExpanded ? "min-h-[340px]" : ""
       }`}
     >

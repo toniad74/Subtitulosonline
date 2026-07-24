@@ -19,7 +19,7 @@ export interface SubtitleItem {
   createdAt: number; // Date.now()
 }
 
-export type SubtitleDisplayStyle = 'cinema' | 'glass' | 'neon' | 'light' | 'minimal';
+export type PillShape = 'none' | 'sm' | 'md' | 'lg' | 'full';
 
 export interface SubtitleSettings {
   sourceLanguage: string; // 'es-ES', 'en-US', etc.
@@ -27,6 +27,7 @@ export interface SubtitleSettings {
   fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   fontFamily: string;
   displayStyle: SubtitleDisplayStyle;
+  borderRadius?: PillShape; // 'none' (Recta 0px), 'sm' (Suave 6px), 'md' (Redondeada 12px), 'lg' (Amplia 20px), 'full' (Ovalada/Píldora 9999px)
   overlayPosition: 'bottom' | 'center' | 'top';
   showSpeakers: boolean;
   showTimestamps: boolean;
@@ -45,6 +46,7 @@ export interface SubtitleSettings {
   maxWordsPerLine: number; // Max words per line (e.g. 10)
   maxLines: number; // Max lines per subtitle screen (e.g. 2)
   showInterim: boolean; // Whether to show word-by-word interim text or only complete phrases
+  silenceTimeoutMs?: number; // Time in ms before clearing subtitle on silence (e.g. 2000)
 }
 
 export interface ConversationSummary {

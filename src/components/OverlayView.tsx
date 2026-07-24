@@ -375,6 +375,14 @@ export const OverlayView: React.FC<{
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const borderRadiusClasses: Record<string, string> = {
+    none: "rounded-none",
+    sm: "rounded-lg",
+    md: "rounded-2xl",
+    lg: "rounded-3xl",
+    full: "rounded-[9999px]",
+  };
+
   return (
     <div
       className={`fixed inset-0 w-screen h-screen flex justify-center px-6 transition-colors duration-300 select-none overflow-hidden ${
@@ -449,10 +457,10 @@ export const OverlayView: React.FC<{
               ? "bg-red-600 hover:bg-red-500 text-white animate-pulse"
               : "bg-emerald-600 hover:bg-emerald-500 text-white"
           }`}
-          title="Escuchar micrófono directamente en esta ventana de OBS"
+          title="Iniciar o detener micrófono directamente en la ventana de Overlay"
         >
           {isLocalListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-          <span>{isLocalListening ? "Detener Micro" : "Activar Micro"}</span>
+          <span>{isLocalListening ? "Detener Mic Local" : "Activar Mic Local"}</span>
         </button>
 
         {/* Toggle Silence Hint */}
@@ -483,7 +491,7 @@ export const OverlayView: React.FC<{
           onClick={() => {
             window.location.search = "";
           }}
-          className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-lg transition"
+          className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-[#E0E0E6] hover:text-white rounded-lg transition"
           title="Volver a la aplicación principal"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -499,7 +507,7 @@ export const OverlayView: React.FC<{
               ...pillStyle,
               ...getTextStyle(),
             }}
-            className={`inline-block px-8 py-4 sm:px-10 sm:py-5 rounded-3xl shadow-2xl backdrop-blur-md transition-all duration-150 max-w-[92vw] text-center ${
+            className={`inline-block px-8 py-4 sm:px-10 sm:py-5 ${borderRadiusClasses[settings.borderRadius || "lg"]} shadow-2xl backdrop-blur-md transition-all duration-150 max-w-[92vw] text-center ${
               fontSizeClasses[settings.fontSize || "lg"]
             }`}
           >

@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type, Laptop } from "lucide-react";
+import { Sparkles, Globe, BookOpen, Users, Sliders, X, Check, Brain, AlignLeft, Palette, Type, Laptop, SquareDot } from "lucide-react";
 import { SubtitleSettings } from "../types";
 import { DEFAULT_FONTS, getInstalledSystemFonts, FontOption } from "../utils/fonts";
 
@@ -210,6 +210,29 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
             <p className="text-[10px] text-[#6B6B76]">
               Ajusta la densidad en pantalla. Por defecto: máximo 10 palabras por línea y 2 líneas simultáneas.
             </p>
+
+            {/* Silence clearing timeout control */}
+            <div className="space-y-1.5 pt-3 border-t border-[#2A2A32]">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-xs font-medium text-white flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                  Limpieza automática tras silencio
+                </span>
+                <span className="font-mono text-indigo-400 font-bold">{((settings.silenceTimeoutMs || 2000) / 1000).toFixed(1)}s</span>
+              </div>
+              <input
+                type="range"
+                min={1000}
+                max={4000}
+                step={500}
+                value={settings.silenceTimeoutMs || 2000}
+                onChange={(e) => onUpdateSettings({ silenceTimeoutMs: Number(e.target.value) })}
+                className="w-full accent-indigo-500 bg-[#0E0E12] cursor-pointer"
+              />
+              <p className="text-[10px] text-[#6B6B76]">
+                Tiempo en segundos antes de limpiar la pantalla cuando dejas de hablar (1.0s ultra rápido, 2.0s estándar).
+              </p>
+            </div>
           </div>
 
           {/* Visual Customization: Background Color, Subtitle Color, Typography, and Border */}
@@ -247,6 +270,40 @@ export const AISettingsPanel: React.FC<AISettingsPanelProps> = ({
                         Subtítulo Aa
                       </span>
                       <span className="text-[10px] text-[#6B6B76] mt-1 font-sans truncate">{font.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Pill Shape / Border Radius Selection */}
+            <div className="space-y-2 pt-2 border-t border-[#2A2A32]">
+              <label className="text-[10px] uppercase tracking-widest text-[#6B6B76] font-bold flex items-center gap-1.5">
+                <SquareDot className="w-3.5 h-3.5 text-indigo-400" />
+                Forma de las Esquinas de la Pastilla
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {[
+                  { id: "none", name: "Rectas", desc: "0px (Ángulo 90°)" },
+                  { id: "sm", name: "Suaves", desc: "8px (Ligero)" },
+                  { id: "md", name: "Redondeadas", desc: "16px (Estándar)" },
+                  { id: "lg", name: "Amplias", desc: "24px (Curvo)" },
+                  { id: "full", name: "Ovalada", desc: "Píldora Total" },
+                ].map((shape) => {
+                  const isSelected = (settings.borderRadius || "lg") === shape.id;
+                  return (
+                    <button
+                      key={shape.id}
+                      type="button"
+                      onClick={() => onUpdateSettings({ borderRadius: shape.id as any })}
+                      className={`p-2 rounded-lg border text-center transition flex flex-col items-center justify-center ${
+                        isSelected
+                          ? "border-indigo-500 bg-indigo-500/20 text-white shadow"
+                          : "border-[#2A2A32] bg-[#0E0E12] text-slate-300 hover:border-slate-600 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{shape.name}</span>
+                      <span className="text-[9px] text-[#6B6B76] mt-0.5">{shape.desc}</span>
                     </button>
                   );
                 })}

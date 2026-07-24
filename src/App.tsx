@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   fontSize: "lg",
   fontFamily: "montserrat",
   displayStyle: "cinema",
+  borderRadius: "lg",
   overlayPosition: "bottom",
   showSpeakers: true,
   showTimestamps: true,
@@ -52,6 +53,7 @@ const DEFAULT_SETTINGS: SubtitleSettings = {
   maxWordsPerLine: 10,
   maxLines: 2,
   showInterim: true,
+  silenceTimeoutMs: 2000,
 };
 
 export default function App() {
@@ -171,12 +173,12 @@ const ensurePeriod = (str: string): string => {
       window.clearTimeout(silenceTimeoutRef.current);
     }
 
-    // Quita el subtítulo en pantalla tras 4 segundos de silencio sin locución
+    // Quita el subtítulo en pantalla tras el tiempo configurado de silencio (2.0s por defecto)
     silenceTimeoutRef.current = window.setTimeout(() => {
       setInterimText("");
       setCurrentSubtitle(null);
       latestInterimRef.current = "";
-    }, 4000);
+    }, settings.silenceTimeoutMs || 2000);
   };
 
   // Save settings to localStorage
