@@ -3,12 +3,7 @@ import { SubtitleItem, SubtitleSettings } from "../types";
 import { Copy, Check, ExternalLink, RefreshCw, Eye, Sparkles, Monitor, ArrowLeft, Mic, MicOff, Play } from "lucide-react";
 import { SpeechRecognitionService } from "../utils/speech";
 
-interface OverlayStatePayload {
-  interimText: string;
-  currentSubtitle: SubtitleItem | null;
-  settings: SubtitleSettings;
-  isListening: boolean;
-}
+import { ClientPeerManager, getSavedRoomId, OverlayStatePayload } from "../utils/peerSync";
 
 const hexToRgba = (hex: string, opacity: number = 90) => {
   if (!hex) return `rgba(10, 10, 12, ${opacity / 100})`;
@@ -198,8 +193,22 @@ export const OverlayView: React.FC<{
     };
   }, []);
 
-  // Listen to BroadcastChannel, localStorage, and Server Polling for multi-tab & OBS live sync
+  // Listen to BroadcastChannel, localStorage, Server Polling, and WebRTC PeerJS for multi-tab & vMix/OBS live sync
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const targetRoom = params.get("room") || getSavedRoomId();
+
+    // 1. WebRTC PeerJS Sync (essential for vMix & separate browser processes)
+    const clientPeer = new ClientPeerManager(
+      targetRoom,
+      (payload) => {
+        if (payload.interimText !== undefined) setInterimText(payload.interimText);
+        if (payload.currentSubtitle !== undefined) setCurrentSubtitle(payload.currentSubtitle);
+        if (payload.settings) setSettings(payload.settings);
+        if (payload.isListening !== undefined) setIsListening(payload.isListening);
+      }
+    );
+
     let bc: BroadcastChannel | null = null;
     if ("BroadcastChannel" in window) {
       bc = new BroadcastChannel("scribe_subtitles_channel");
@@ -241,7 +250,7 @@ export const OverlayView: React.FC<{
       } catch (err) {}
     }
 
-    // Server HTTP polling loop (critical for OBS Studio Browser Source which runs in a separate CEF browser process)
+    // Server HTTP polling loop
     let lastFetchedTime = 0;
     const pollServerState = async () => {
       try {
@@ -259,10 +268,10 @@ export const OverlayView: React.FC<{
       } catch (err) {}
     };
 
-    // Poll every 200ms for fast real-time response
     const pollInterval = window.setInterval(pollServerState, 200);
 
     return () => {
+      clientPeer.destroy();
       if (bc) bc.close();
       window.removeEventListener("storage", handleStorage);
       window.clearInterval(pollInterval);
@@ -355,7 +364,9 @@ export const OverlayView: React.FC<{
   }[settings.overlayPosition || "bottom"];
 
   const handleCopyOverlayUrl = () => {
-    const baseUrl = `${window.location.origin}${window.location.pathname}?mode=overlay&chroma=${outerBg}`;
+    const params = new URLSearchParams(window.location.search);
+    const targetRoom = params.get("room") || getSavedRoomId();
+    const baseUrl = `${window.location.origin}${window.location.pathname}?mode=overlay&chroma=${outerBg}&room=${targetRoom}`;
     navigator.clipboard.writeText(baseUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);

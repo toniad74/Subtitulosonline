@@ -24,6 +24,7 @@ import {
   SubtitleItem,
   SubtitleSettings,
 } from "./types";
+import { HostPeerManager, getSavedRoomId } from "./utils/peerSync";
 import { Radio, Mic, Sparkles, Volume2, ShieldCheck, Download, Trash2, Info } from "lucide-react";
 
 const DEFAULT_SETTINGS: SubtitleSettings = {
@@ -87,6 +88,21 @@ export default function App() {
   const latestInterimRef = useRef<string>("");
   const lastRefineTimeRef = useRef<number>(0);
   const bcRef = useRef<BroadcastChannel | null>(null);
+  const hostPeerRef = useRef<HostPeerManager | null>(null);
+  const [connectedPeersCount, setConnectedPeersCount] = useState<number>(0);
+  const [roomId, setRoomId] = useState<string>(() => getSavedRoomId());
+
+  // WebRTC PeerJS Host Initialization for vMix / OBS remote sync
+  useEffect(() => {
+    hostPeerRef.current = new HostPeerManager(roomId, (count) => {
+      setConnectedPeersCount(count);
+    });
+    return () => {
+      if (hostPeerRef.current) {
+        hostPeerRef.current.destroy();
+      }
+    };
+  }, [roomId]);
 
   // Persistent BroadcastChannel for real-time OBS / tab syncing
   useEffect(() => {
@@ -177,6 +193,7 @@ export default function App() {
     } catch (e) {}
 
     sendLiveStateToServer(payload);
+    hostPeerRef.current?.broadcast(payload);
   }, [interimText, currentSubtitle, settings, isListening, sendLiveStateToServer]);
 
   // Load available audio input devices on startup
